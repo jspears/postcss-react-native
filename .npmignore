@@ -1,0 +1,12 @@
+.gitignore
+
+node_modules/
+
+test/
+.travis.yml
+
+gulpfile.js
+.idea
+ChangeLog.md
+.travis.yml
+.babelrc
