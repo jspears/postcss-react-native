@@ -4,36 +4,39 @@ import {expect} from 'chai'
 describe('mediaSelector', function () {
     const css = {
         'test': {
-            'hello': 1
+            'css': 1
         }
     }, change = {
         'test': {
-            'hello': 2
+            'css': 2
         }
     }, merge = {
         'test': {
-            more: 1
+            merge: 1
         }
     };
     it('should match rules', function () {
+        const rules = [
+            {
+                type: 'max-height',
+                value: 600,
+                css: merge
+            },
+            {
+                css
+            },
+            {
+                type: 'min-width',
+                value: 700,
+                css: change
 
-        const result = mediaSelector([{
-            css
-        }, {
-            type: 'min-width',
-            value: 700,
-            css: change
-
-        }, {
-            type: 'max-height',
-    //        not: true,
-            value: 5350,
-            css: merge
-        }], {height: 500, width: 600, density: 1.5});
+            }
+        ];
+        const result = mediaSelector(rules, {height: 500, width: 600, density: 1.5});
 
         expect(result).to.exist;
-        expect(result[0].css).to.eq(css);
-        expect(result[1].css).to.eq(merge);
+        expect(result[0]).to.eq(rules[0])
+        expect(result[1]).to.eq(rules[1])
         expect(result.length).to.eq(2);
     });
 
