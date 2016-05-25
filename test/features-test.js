@@ -7,7 +7,7 @@ function feature(type, value, {width=0, height=0, scale=0}, answer) {
         width,
         height,
         scale
-    }), `${type} ${value} ${width}/${height}@${scale} is ${answer}`).to.be[answer ? 'true' : 'false'];
+    }), `${type} ${value} ${width}/${height}@${scale} is ${answer}`).to.be[answer+''];
 }
 
 

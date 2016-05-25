@@ -8,10 +8,30 @@ describe('decls', function () {
 
     describe('variations of parse', function () {
         for (const [test, result] of [
-            [[1], {top: {value: 1}, right: {value: 1}, bottom: {value: 1}, left: {value: 1}}],
-            [[1, 2], {top: {value: 1}, right: {value: 2}, bottom: {value: 1}, left: {value: 2}}],
-            [[1, 2, 3], {top: {value: 1}, right: {value: 2}, bottom: {value: 3}, left: {value: 2}}],
-            [[1, 2, 3, 4], {top: {value: 1}, right: {value: 2}, bottom: {value: 3}, left: {value: 4}}]
+            [[1], {
+                "top": "1",
+                "right": "1",
+                "bottom": "1",
+                "left": "1"
+            }],
+            [[1, 2], {
+                "top": "1",
+                "right": "2",
+                "bottom": "1",
+                "left": "2"
+            }],
+            [[1, 2, 3], {
+                "top": "1",
+                "right": "2",
+                "bottom": "3",
+                "left": "2"
+            }],
+            [[1, 2, 3, 4], {
+                "top": "1",
+                "right": "2",
+                "bottom": "3",
+                "left": "4"
+            }]
         ]) {
             it(`should parse ${test} `, function () {
                 const t = parse('margin', test.join(' '));
@@ -23,18 +43,15 @@ describe('decls', function () {
     });
 
     it('should return decls', function () {
-
-
-        const ret = parse('margin', '10px 3% 1em');
-        expect(ret).to.eql({
-            type: 'margin',
-            vendor: false,
-            values: {
-                top: {value: 10},
-                right: {value: 3, unit: '%'},
-                bottom: {value: 1, unit: 'em'},
-                left: {value: 3, unit: '%'}
-            }
+        expect(parse('margin', '10px 3% 1em')).to.eql({
+            "type": "margin",
+            "values": {
+                "bottom": "1em",
+                "left": "3%",
+                "right": "3%",
+                "top": "10px"
+            },
+            "vendor": false
         })
     });
     it('should parse specific', function () {
@@ -45,7 +62,7 @@ describe('decls', function () {
         expect(bottom).to.not.exist;
         expect(right).to.not.exist;
 
-        expect(left).to.eql({value: 5});
+        expect(left).to.eql('5px');
     });
 
     it('should parse border radius', function () {

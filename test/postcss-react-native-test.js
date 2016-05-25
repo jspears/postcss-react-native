@@ -37,6 +37,8 @@ describe('postcss-react-native', function () {
             const css = f(FEATURES, {height: 1024, width: 768, scale: 1, vendor: 'ios'});
             expect(css).to.eql({
                 "stuff": {
+                    "borderBottomWidth": 6.666666666666666,
+                    "borderTopWidth": 3,
                     "marginTop": 20,
                     "marginRight": 10,
                     "marginBottom": 5,
