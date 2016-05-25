@@ -6,7 +6,7 @@ import plugin from '../src/index';
 
 const test = function (name, toStyleSheet) {
     var input = read('test/fixtures/' + name + '.css');
-    var output = read('test/fixtures/' + name + '.out.js');
+//    var output = read('test/fixtures/' + name + '.out.js');
 
     return postcss(plugin({toStyleSheet})).process(input, {from: name, to: name});
     //.then(result=> expect(result).css.to.eql(output));
@@ -43,7 +43,10 @@ describe('postcss-react-native', function () {
                     "marginRight": 10,
                     "marginBottom": 5,
                     "marginLeft": 2,
-                    "color": "yellow"
+                    "color": "yellow",
+                    "borderLeftWidth": 5,
+                    "borderRightWidth": 5,
+                    "borderTopColor": "green"
                 },
                 "other": {
                     "opacity": 0.5
@@ -63,10 +66,24 @@ describe('postcss-react-native', function () {
                     "marginRight": 10,
                     "marginBottom": 5,
                     "marginLeft": 2,
-                    "color": "purble"
+                    "color": "purble",
+                    "borderLeftWidth": 5,
+                    "borderRightWidth": 5,
+                    "borderTopColor": "green"
                 },
                 "other": {
                     "opacity": 0.5
+                }
+            });
+        });
+    });
+    it('should parse font', ()=> {
+        return test('font', (f, source)=> {
+            const css = f(FEATURES, {height: 1024, width: 768, scale: 1, vendor: 'android'});
+            expect(css).to.eql({
+                "font1": {
+                    "fontSize": 2,
+                    "fontFamily": "Open Sans"
                 }
             });
         });

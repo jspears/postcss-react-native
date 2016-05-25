@@ -42,12 +42,12 @@ describe('parseMedia', function () {
         [`screen and (device-aspect-ratio: 16/9), screen and (device-aspect-ratio: 16/10)`, [{
             "inverse": false,
             "type": "screen",
-            "expressions": [{"feature": "device-aspect-ratio", "modifier": void(0),"value": "16/9"}]
+            "expressions": [{"feature": "device-aspect-ratio", "modifier": void(0), "value": "16/9"}]
         }, {
             "inverse": false,
             "type": "screen",
             "expressions": [{"feature": "device-aspect-ratio", "modifier": void(0), "value": "16/10"}]
-        }]],
+        }]]
     ]) {
 
         it(`should parse rule ${rule}`, function () {

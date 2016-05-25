@@ -1,10 +1,20 @@
 "use strict";
 import unit from './unit';
 import FEATURES from './features';
+
 const quote = JSON.stringify.bind(JSON);
 
 const uc = (v = '')=> {
     return v[0].toUpperCase() + v.substring(1);
+};
+
+const ucc = (v)=> {
+    return v.split('-').map(uc).join('');
+};
+
+const camel = (arg, ...args)=> {
+    const [a, ...rest] = arg.split('-');
+    return [a, ...rest.map(ucc), ...args.map(ucc)].join('');
 };
 
 const vendorIf = (vendor, str)=> {
@@ -26,14 +36,6 @@ const rhsunit = (u)=> {
     return ret;
 };
 
-const ucc = (v)=> {
-    return v.split('-').map(uc).join('');
-};
-
-const camel = (arg, ...args)=> {
-    const [a, ...rest] = arg.split('-')
-    return [a, ...rest.map(ucc), ...args.map(ucc)].join('');
-};
 
 const rhs = (val)=> {
     if (typeof val === 'number' || typeof val == 'boolean') {
@@ -42,6 +44,7 @@ const rhs = (val)=> {
         return rhsunit(val);
     }
 };
+
 const isObjectLike = (value)=> {
     if (!value) return false;
     const tofv = typeof value;
@@ -54,15 +57,18 @@ const isObjectLike = (value)=> {
     if (value instanceof Date || value instanceof RegExp)return false;
     return true;
 };
+
 const pdecl = (root, type, values) => {
     if (!isObjectLike(values)) {
         const vvv = rhs(values);
         return `${root}.${camel(type)} = ${vvv}`;
     }
-    const ret = Object.keys(values).reduce((str, key)=> {
+    return Object.keys(values).reduce((str, key)=> {
         const v = values[key];
-        if (typeof v == 'string' || v === 'number') {
+        if (!isObjectLike(v)) {
             return `${str}\n ${root}.${camel(type, key)} = ${rhs(v)}`;
+        } else if (Array.isArray(v)) {
+            return `${str}\n ${root}.${camel(type, key)} = ${v.map(rhs).join(',')}`;
         } else if (typeof v === 'object') {
             return Object.keys(v).reduce((ret, kv)=> {
                 return `${str}\n  ${root}.${camel(type, key, kv)} = ${rhs(v[kv])}`;
@@ -72,7 +78,6 @@ const pdecl = (root, type, values) => {
         }
         return str;
     }, '');
-    return ret;
 };
 
 const writeCSS = (css) => {
@@ -88,8 +93,6 @@ const writeCSS = (css) => {
 
 
 const writeExpression = (expr)=> {
-    var feature = FEATURES[`${expr.modifier ? expr.modifier + '-' : ''}${expr.feature}`];
-    console.log(feature && feature+'');
     return `\t(FEATURES['${expr.modifier ? expr.modifier + '-' : ''}${expr.feature}'] && FEATURES['${expr.modifier ? expr.modifier + '-' : ''}${expr.feature}']( ${rhsunit(expr.value)}, config ))\n`;
 };
 

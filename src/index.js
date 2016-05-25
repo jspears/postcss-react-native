@@ -27,7 +27,7 @@ module.exports = postcss.plugin('postcss-react-native', function (opts) {
         const root = {};
         const rules = [{css: root}];
         css.walkRules((rule)=> {
-            if (rule.parent.type === 'root') {
+            if (rule.parent.type !== 'root') {
                 return;
             }
             const selector = parser.process(rule.selector).res;

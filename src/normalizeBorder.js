@@ -10,13 +10,13 @@ const _set = (obj, prop) => {
     }
     return (obj[prop] = {});
 };
-const border = (side, prop, values, obj)=> {
+const _border = (side, prop, values, obj)=> {
 
     if (side && prop) {
         _set(obj, side)[prop] = trbl(values, side);
     } else if (prop) {
         TRBL.forEach((s)=> {
-            border(s, prop, values, obj);
+            _border(s, prop, values, obj);
         })
     } else if (side) {
         PROPS.reduce((ret, p, i)=> {
@@ -26,7 +26,7 @@ const border = (side, prop, values, obj)=> {
             return ret;
         }, obj);
     } else {
-        const units = allUnit(values,isBorderUnit);
+        const units = allUnit(values, isBorderUnit);
         if (units) {
             TRBL.forEach(s => _set(obj, s).width = trbl(units, s));
         } else {
@@ -77,7 +77,7 @@ const handle = (type, values, obj = {})=> {
     if (prop === 'radius') {
         return radius(side, corner, values);
     } else {
-        return border(side, prop, values, obj);
+        return _border(side, prop, values, obj);
     }
 };
 
@@ -87,6 +87,10 @@ const parse = (str) => {
 
 
     return handle(decl, value);
+};
+
+export const border = (prefix, value)=> {
+    return parse(`border${prefix ? '-' + prefix : ''}: ${value}`);
 };
 
 

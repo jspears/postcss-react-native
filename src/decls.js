@@ -1,7 +1,8 @@
 "use strict";
 import valueparser from 'postcss-value-parser';
-import normalizeBorder from './normalizeBorder';
+import {border} from './normalizeBorder';
 import prefill from './fill';
+import font from './font';
 /**
  *
  * 1->1 1 1 1
@@ -55,6 +56,19 @@ function _unit(value) {
     return isNumeric(value) ? {value: parseFloat(value)} : {value};
 
 }
+const words = (str) => {
+    const rest = [];
+    if (!str) return rest;
+
+    valueparser(str).walk((node, pos, nodes)=> {
+        if (node.type === 'word') {
+            rest.push(node.value);
+        }
+    });
+
+    return rest;
+};
+
 function _box(postfix, values, table = TRBLV, rtable = RTRBLV) {
     const v0 = values.splice(0, 1)[0];
     if (!v0) {
@@ -82,7 +96,7 @@ function _box(postfix, values, table = TRBLV, rtable = RTRBLV) {
     }, {});
 }
 function box(postfix, values, prefix, table = TRBLV) {
-    return _box(postfix, values, table);
+    return _box(postfix, words(values), table);
 }
 const color = postfixWrap.bind(null, 'color');
 
@@ -103,9 +117,7 @@ export const HANDLERS = {
     margin: box,
     padding: box,
     color: first,
-    border(postfix, value){
-        return normalizeBorder(`border-${postfix}: ${value.join(' ')}`);
-    },
+    border,
     shadow: enumer('color', 'offset', 'opacity', 'radius'),
     position: enumer('absolute', 'relative'),
     flex(postfix, value){
@@ -169,16 +181,7 @@ export const HANDLERS = {
     },
     overflow: enumer('visible', 'hidden'),
     backface: enumer('visiblility'),
-    font(postfix, value){
-        switch (postfix) {
-            case 'family':
-            case 'size':
-            case 'style':
-            case 'weight':
-            case 'color':
-                return color(value);
-        }
-    },
+    font,
     text(postfix, value){
         switch (postfix) {
             case 'shadow-offset':
@@ -203,20 +206,13 @@ const VENDORS = ['mox', 'ie', 'ios', 'android', 'native', 'webkit', 'o', 'ms'];
 const declRe = new RegExp('^(?:-(' + (VENDORS.join('|')) + ')-)?(.+?)(?:-(.+?))?$');
 export function parse(decl, str) {
     const ret = {};
-    let rest = [];
-    const walk = valueparser(str);
-    walk.walk((node, pos, nodes)=> {
-        if (node.type === 'word') {
-            rest.push(node.value);
-        }
-    });
     const [match, vendor=false, type, postfix] = declRe.exec(decl);
     const handler = HANDLERS[type];
     if (!handler) {
         console.warn('unknown type', type, postfix);
         return;
     }
-    return {type, vendor, values: handler(postfix, rest, vendor)}
+    return {type, vendor, values: handler(postfix, str, vendor)}
 }
 
 export default ({parse});
