@@ -1,0 +1,22 @@
+.stuff {
+    margin: 10px;
+    border-width: 5px;
+    border-top: 2px solid green;
+    color: red;
+
+}
+
+@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) {
+    .stuff {
+        margin: 20px 10px 5px 2px;
+        border-top-width: 3px;
+        border-bottom-width: 5pt;
+        color: blue;
+        -android-color: purble;
+        -ios-color: yellow;
+    }
+
+    .other {
+        opacity: .5;
+    }
+}

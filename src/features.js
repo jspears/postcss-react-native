@@ -38,9 +38,9 @@ const DEVICE_FEATURES = {
 };
 
 const FEATURES = Object.assign({
-        'color': (v, {density}) => v == density,
-        'min-color': (rule, {density}) => density >= rule,
-        'max-color': (rule, {density}) => density <= rule,
+        'color': (v, {scale}) => v == scale,
+        'min-color': (rule, {scale}) => scale >= rule,
+        'max-color': (rule, {scale}) => scale <= rule,
         'orientation': (v, {height, width})=> {
             if (v === 'landscape') {
                 return width > height;

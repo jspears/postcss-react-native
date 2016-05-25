@@ -2,12 +2,12 @@
 import FEATURES from '../src/features';
 import {expect} from 'chai';
 
-function feature(type, value, {width=0, height=0, density=0}, answer) {
+function feature(type, value, {width=0, height=0, scale=0}, answer) {
     return expect(FEATURES[type](value, {
         width,
         height,
-        density
-    }), `${type} ${value} ${width}/${height}@${density} is ${answer}`).to.be[answer ? 'true' : 'false'];
+        scale
+    }), `${type} ${value} ${width}/${height}@${scale} is ${answer}`).to.be[answer ? 'true' : 'false'];
 }
 
 
@@ -21,16 +21,16 @@ describe('features', function () {
     });
 
     it('should match color', function () {
-        feature('color', 2, {density: 1}, false);
-        feature('color', 1, {density: 1}, true);
+        feature('color', 2, {scale: 1}, false);
+        feature('color', 1, {scale: 1}, true);
 
-        feature('min-color', 1, {density: 1}, true);
-        feature('min-color', 2, {density: 4}, true);
-        feature('min-color', 5, {density: 4}, false);
+        feature('min-color', 1, {scale: 1}, true);
+        feature('min-color', 2, {scale: 4}, true);
+        feature('min-color', 5, {scale: 4}, false);
 
-        feature('max-color', 2, {density: 1}, true);
-        feature('max-color', 5, {density: 4}, true);
-        feature('max-color', 2, {density: 4}, false);
+        feature('max-color', 2, {scale: 1}, true);
+        feature('max-color', 5, {scale: 4}, true);
+        feature('max-color', 2, {scale: 4}, false);
     });
 
     for (let prefix of ['', 'device-']) {

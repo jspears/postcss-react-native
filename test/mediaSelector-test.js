@@ -1,5 +1,5 @@
 "use strict";
-import mediaSelector from '../src/mediaSelector';
+import {match, mergeCss} from '../src/mediaSelector';
 import {expect} from 'chai'
 describe('mediaSelector', function () {
     const css = {
@@ -13,31 +13,72 @@ describe('mediaSelector', function () {
     }, merge = {
         'test': {
             merge: 1
+        },
+        'test3': {
+            what: 2
         }
     };
     it('should match rules', function () {
         const rules = [
             {
-                type: 'max-height',
-                value: 600,
-                css: merge
+                expressions: [{
+                    type: 'max-height',
+                    value: 600
+                }
+                    ,
+                    {
+                        type: 'min-width',
+                        value: 700
+                    }]
             },
             {
-                css
-            },
-            {
-                type: 'min-width',
-                value: 700,
-                css: change
-
+                expressions: [
+                    {
+                        type: 'height',
+                        value: 888
+                    },
+                    {
+                        type: 'color',
+                        value: 1,
+                        not: true
+                    }]
             }
         ];
-        const result = mediaSelector(rules, {height: 500, width: 600, density: 1.5});
+        let result = match(rules[0], {height: 500, width: 600, density: 1});
+        expect(result).to.eql([]);
 
-        expect(result).to.exist;
-        expect(result[0]).to.eq(rules[0])
-        expect(result[1]).to.eq(rules[1])
-        expect(result.length).to.eq(2);
     });
+    it('should merge rules', function () {
+        const media = [
+            {
+                css: css
+            },
+            {
 
-});
+                css: merge,
+                rules: [
+                    {
+                        type: 'max-height',
+                        value: 600
+                    },
+
+                    {
+                        type: 'min-width',
+                        value: 700
+                    }]
+            },
+            {
+                css: change,
+                rules: [
+                    {
+                        type: 'height',
+                        value: 888
+                    }
+                ]
+            }
+        ];
+
+        const result = mergeCss(media);
+    });
+})
+;
