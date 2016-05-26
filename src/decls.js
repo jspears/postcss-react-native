@@ -1,8 +1,8 @@
 "use strict";
 import valueparser from 'postcss-value-parser';
 import {border} from './normalizeBorder';
-import prefill from './fill';
 import font from './font';
+import words from './words';
 /**
  *
  * 1->1 1 1 1
@@ -20,53 +20,12 @@ const toMap = (o, v, i)=> {
 
 const RTRBLV = ['top', 'right', 'bottom', 'left', 'vertical'];
 const TRBL = RTRBLV.reduce(toMap, {});
-
-const RTLBR = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
-const TLBR = RTLBR.reduce(toMap, {});
-
 const TRBLV = Object.assign({}, TRBL, {
     vertical: 4
 });
 
-function isNumeric(n) {
-    return !isNaN(parseFloat(n)) && isFinite(n);
-}
 const postfixWrap = (postfix, value)=> {
-    return {postfix, value};
-};
-
-function _unit(value) {
-
-    if (value === 'auto') {
-        return null;
-    }
-
-    let {number, unit} =valueparser.unit(value);
-
-    if (unit) {
-        number = parseFloat(number);
-        if (unit == 'px') {
-            return {value: number};
-        }
-        return {
-            unit,
-            value: number
-        }
-    }
-    return isNumeric(value) ? {value: parseFloat(value)} : {value};
-
-}
-const words = (str) => {
-    const rest = [];
-    if (!str) return rest;
-
-    valueparser(str).walk((node, pos, nodes)=> {
-        if (node.type === 'word') {
-            rest.push(node.value);
-        }
-    });
-
-    return rest;
+    return {[postfix]: value};
 };
 
 function _box(postfix, values, table = TRBLV, rtable = RTRBLV) {
@@ -102,10 +61,9 @@ const color = postfixWrap.bind(null, 'color');
 
 
 const unit = (postfix, value)=>unit(value);
-const value = (postfix, value)=>value;
 const enumer = (...enums)=>postfixWrap;
 const first = (postfix, value)=> {
-    return prefill(value, 0);
+    return value;
 };
 export const HANDLERS = {
     width: unit,
@@ -204,6 +162,7 @@ export const HANDLERS = {
 };
 const VENDORS = ['mox', 'ie', 'ios', 'android', 'native', 'webkit', 'o', 'ms'];
 const declRe = new RegExp('^(?:-(' + (VENDORS.join('|')) + ')-)?(.+?)(?:-(.+?))?$');
+
 export function parse(decl, str) {
     const ret = {};
     const [match, vendor=false, type, postfix] = declRe.exec(decl);

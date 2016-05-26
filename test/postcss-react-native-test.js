@@ -84,6 +84,9 @@ describe('postcss-react-native', function () {
                 "font1": {
                     "fontSize": 2,
                     "fontFamily": "Open Sans"
+                },
+                "font2": {
+                    "fontSize": 192
                 }
             });
         });

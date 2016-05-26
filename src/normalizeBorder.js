@@ -1,6 +1,7 @@
 "use strict";
 import {allUnit, isBorderUnit} from './unit';
 import prefill, {trbl, TRBL} from './fill';
+import words from './words';
 
 const PROPS = ['width', 'style', 'color'];
 
@@ -19,12 +20,9 @@ const _border = (side, prop, values, obj)=> {
             _border(s, prop, values, obj);
         })
     } else if (side) {
-        PROPS.reduce((ret, p, i)=> {
-            if (i < values.length) {
-                (ret[side] || (ret[side] = {}))[p] = values[i];
-            }
-            return ret;
-        }, obj);
+        for (let i = 0, l = Math.min(values.length, PROPS.length); i < l; i++) {
+            (obj[side] || (obj[side] = {}))[PROPS[i]] = values[i];
+        }
     } else {
         const units = allUnit(values, isBorderUnit);
         if (units) {
@@ -73,7 +71,7 @@ const radius = (side, corner, values, obj = {})=> {
 };
 
 const handle = (type, values, obj = {})=> {
-    const [ , side, corner, prop] = /border(?:-(top|right|bottom|left))?(?:-(right|left))?(?:-(width|style|color|radius))?$/.exec(type);
+    const [ , side, corner, prop] = /^(?:border)?(?:-(top|right|bottom|left))?(?:-(right|left))?(?:-(width|style|color|radius))?$/.exec(type);
     if (prop === 'radius') {
         return radius(side, corner, values);
     } else {
@@ -90,7 +88,7 @@ const parse = (str) => {
 };
 
 export const border = (prefix, value)=> {
-    return parse(`border${prefix ? '-' + prefix : ''}: ${value}`);
+    return handle('-' + prefix, words(value));
 };
 
 

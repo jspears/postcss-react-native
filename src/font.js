@@ -14,7 +14,6 @@ import pcf from 'parse-css-font';
  * @param postfix
  * @param values
  */
-const ORDER = ['style', 'variant', 'weight', 'stretch', 'size', 'line-height', 'family']
 export default function font(postfix, values) {
 
     if (postfix) {

@@ -28,7 +28,7 @@ const rhsunit = (u)=> {
     const un = unit(u);
     let ret;
     if (un && typeof un.value === 'number') {
-        ret = un.unit ? `(${un.value} * ${un.unit})` : un.value;
+        ret = un.unit ? `(${un.value} * units["${un.unit}"])` : un.value;
     } else {
         ret = quote(u);
     }
@@ -105,9 +105,7 @@ const writeRule = (rule)=> {
 const writeSheet = ({rules=[], css}, idx) => {
     let str = '';
     if (rules && rules.length) {
-        str += `if (${rules.map(writeRule).join(' && ')}){
-         ${writeCSS(css)}
-}`;
+        str += `if (${rules.map(writeRule).join(' && ')}){\n${writeCSS(css)}\n}`;
     } else {
         str += `${writeCSS(css)}`;
     }
@@ -119,14 +117,20 @@ export const source = (sources)=> {
 const css = {};
 const px = 1, 
       vendor = config.vendor,
+      inch = 96,
       vh = config.height / 100,
       vw = config.width / 100, 
-      inch=(96 *px), 
-      pt = (inch/72), 
-      em = 1, 
-      pc = 12 * pt
-      vmin = Math.min(vw, vh),
-      vmax = Math.max(vw, vh);
+      units = {
+      px : px,
+      vh : vh,
+      vw : vw,
+      'in':inch, 
+      pt:(inch/72), 
+      em:1, 
+      pc:12 * (inch/72),
+      vmin:Math.min(vw, vh),
+      vmax: Math.max(vw, vh)
+};
 ${sources.map(writeSheet).join('\n')}
             
 return css;        
