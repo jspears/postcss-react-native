@@ -112,7 +112,7 @@ const writeSheet = ({rules=[], css}, idx) => {
     return str;
 };
 
-export const source = (sources)=> {
+export const source = (sources=[])=> {
     return `
 const css = {};
 const px = 1, 

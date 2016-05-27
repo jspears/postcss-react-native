@@ -1,5 +1,5 @@
 "use strict";
-import nb from '../src/normalizeBorder';
+import nb from '../src/declarations/border';
 import {expect} from 'chai';
 
 /**
@@ -20,7 +20,7 @@ import {expect} from 'chai';
  border-left-color: currentColor
  **/
 
-describe('normalizeBorder', function () {
+describe('border', function () {
     const borderTest = (test, eql, fn = it)=>fn(`should normalize ${test}`, ()=>expect(nb(test), test).to.eql(eql));
     
     borderTest('border: 1px solid red', {

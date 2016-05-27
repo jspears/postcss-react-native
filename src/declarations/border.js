@@ -1,7 +1,7 @@
 "use strict";
-import {allUnit, isBorderUnit} from './unit';
-import prefill, {trbl, TRBL} from './fill';
-import words from './words';
+import {allUnit, isBorderUnit} from '../unit';
+import prefill, {trbl, TRBL} from '../fill';
+import words from '../words';
 
 const PROPS = ['width', 'style', 'color'];
 
@@ -88,7 +88,7 @@ const parse = (str) => {
 };
 
 export const border = (prefix, value)=> {
-    return handle('-' + prefix, words(value));
+    return handle( prefix ? `-${prefix}` : '', words(value));
 };
 
 

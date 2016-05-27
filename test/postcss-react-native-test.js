@@ -11,8 +11,8 @@ const test = function (name, toStyleSheet) {
     return postcss(plugin({toStyleSheet})).process(input, {from: name, to: name});
     //.then(result=> expect(result).css.to.eql(output));
 };
-const testString = function (input, output, opts) {
-    return postcss(plugin(opts)).process(input).then(resp=>expect(resp.to.eql(output)));
+const testString = function (input, opts) {
+    return postcss(plugin(opts)).process(input, process, {from: 'from', to: 'to'});
 };
 //use for debugging;
 const toJSON = (obj, {source:{input:{file='rules'}}})=> {
@@ -24,14 +24,64 @@ var read = function (path) {
 };
 
 describe('postcss-react-native', function () {
-
-
     /*
-     it('simple', function () {
-     test('simple');
-     });
+     transition: margin-left 4s;
+     transition: margin-left 4s 1s;
+     transition: margin-left 4s ease-in-out 1s;
+     transition: margin-left 4s, color 1s;
+     transition: all 0.5s ease-out;
 
      */
+    it('should parse transition', function () {
+        /**
+         * TODO - Make transition conform to dela, duration, property,timing-function
+         * Initial value	as each of the properties of the shorthand:
+         transition-delay: 0s
+         transition-duration: 0s
+         transition-property: all
+         transition-timing-function: ease
+         */
+        return testString('.t1 { transition: margin-left 4s, border 1s ease-in, opacity 30 linear 1s}', {
+            toJSON(css, input){
+                expect(css).to.eql([
+                    {
+                        "css": {
+                            "t1": [
+                                {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [
+                                        {
+                                            "property": "margin-left",
+                                            "duration": 4000,
+                                            "timing-function": "ease",
+                                            "delay": 0
+                                        },
+                                        {
+                                            "property": "border",
+                                            "duration": 1000,
+                                            "timing-function": "ease-in",
+                                            "delay": 0
+                                        },
+                                        {
+                                            "property": "opacity",
+                                            "duration": 30,
+                                            "timing-function": "linear",
+                                            "delay": 1000
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]);
+            },
+            toStyleSheet(json, input){
+
+            }
+        })
+    });
+
     it('media query stuff for ios', function () {
         return test('media', (f, source)=> {
             const css = f(FEATURES, {height: 1024, width: 768, scale: 1, vendor: 'ios'});

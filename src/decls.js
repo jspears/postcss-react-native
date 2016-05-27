@@ -1,8 +1,7 @@
 "use strict";
-import valueparser from 'postcss-value-parser';
-import {border} from './normalizeBorder';
-import font from './font';
+import {border, transition, font} from './declarations';
 import words from './words';
+
 /**
  *
  * 1->1 1 1 1
@@ -60,7 +59,7 @@ function box(postfix, values, prefix, table = TRBLV) {
 const color = postfixWrap.bind(null, 'color');
 
 
-const unit = (postfix, value)=>unit(value);
+const unit = (postfix, value)=>value;
 const enumer = (...enums)=>postfixWrap;
 const first = (postfix, value)=> {
     return value;
@@ -140,6 +139,7 @@ export const HANDLERS = {
     overflow: enumer('visible', 'hidden'),
     backface: enumer('visiblility'),
     font,
+    transition,
     text(postfix, value){
         switch (postfix) {
             case 'shadow-offset':
@@ -164,7 +164,6 @@ const VENDORS = ['mox', 'ie', 'ios', 'android', 'native', 'webkit', 'o', 'ms'];
 const declRe = new RegExp('^(?:-(' + (VENDORS.join('|')) + ')-)?(.+?)(?:-(.+?))?$');
 
 export function parse(decl, str) {
-    const ret = {};
     const [match, vendor=false, type, postfix] = declRe.exec(decl);
     const handler = HANDLERS[type];
     if (!handler) {

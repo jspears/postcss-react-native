@@ -1,6 +1,6 @@
 "use strict";
 
-import font from '../src/font';
+import {font} from '../src/declarations';
 import {expect} from 'chai';
 
 describe('font', function () {
