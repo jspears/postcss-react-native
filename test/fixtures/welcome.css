@@ -1,0 +1,16 @@
+.container {
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    background-color: #F5FCFF;
+}
+.welcome {
+    font-size: 20px;
+    text-align: center;
+    margin: 10px;
+}
+.instructions {
+    text-align: center;
+    color: #333333;
+    margin-bottom: 5px;
+}

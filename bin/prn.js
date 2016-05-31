@@ -96,7 +96,10 @@ if (conf.once) {
             // Initiate the watchers
             watcher(client, conf.src, ['*.scss', '*.css'], function (files) {
                 console.log('watching', files);
-                handleCss(files.map(v=>v.name));
+
+                handleCss(files.map(v=>v.name)).then(null, (e)=> {
+                    console.warn('Error with file', e.message);
+                });
             });
         });
     });
@@ -106,14 +109,18 @@ function handleCss(files) {
     const all = files.map((file)=> {
         if (/\.s?css/.test(file)) {
             const read = fs.readFileSync(path.join(conf.src, file)) + '';
-            return compile(file, read, function (source) {
-                try {
-                    var f = mkpath(path.join(conf.dest, file + '.js'));
-                    fs.writeFileSync(path.join(conf.dest, f), source);
-                } catch (e) {
-                    console.warn('could not write ', file);
-                }
-            });
+            try {
+                return compile(file, read, function (source) {
+                    try {
+                        var f = mkpath(path.join(conf.dest, file + '.js'));
+                        fs.writeFileSync(path.join(conf.dest, f), source);
+                    } catch (e) {
+                        console.warn('could not write ', file);
+                    }
+                });
+            } catch (e) {
+                console.warn('error compiling', file, e);
+            }
         }
     });
     if (conf.index) {

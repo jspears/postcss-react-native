@@ -1,13 +1,9 @@
 .gitignore
-
 node_modules/
-
 out
 test/
 .travis.yml
-
 gulpfile.js
 .idea
 ChangeLog.md
-.travis.yml
 .babelrc

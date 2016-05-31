@@ -141,4 +141,30 @@ describe('postcss-react-native', function () {
             });
         });
     });
+    it('should parse welcome', function () {
+        return test('welcome', (f, source)=> {
+            const css = f(FEATURES, {height: 1024, width: 768, scale: 1, vendor: 'android'});
+            expect(css).to.eql({
+                "container": {
+                    "flex": 1,
+                    "justifyContent": "center",
+                    "alignItems": "center",
+                    "backgroundColor": "#F5FCFF"
+                },
+                "welcome": {
+                    "fontSize": 20,
+                    "textAlign": "center",
+                    "marginTop": 10,
+                    "marginRight": 10,
+                    "marginBottom": 10,
+                    "marginLeft": 10
+                },
+                "instructions": {
+                    "textAlign": "center",
+                    "color": "#333333",
+                    "marginBottom": 5
+                }
+            });
+        });
+    });
 });

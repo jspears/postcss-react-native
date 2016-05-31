@@ -88,6 +88,7 @@ export const HANDLERS = {
             case '':
                 return value;
         }
+        return value;
     },
     justify(postfix, value){
         switch (postfix) {
@@ -138,6 +139,7 @@ export const HANDLERS = {
     },
     overflow: enumer('visible', 'hidden'),
     backface: enumer('visiblility'),
+    background:enumer('color'),
     font,
     transition,
     text(postfix, value){
