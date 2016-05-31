@@ -55,7 +55,7 @@ for (var i = 0, l = args.length; i < l; i++) {
             break
     }
 }
-if (!conf.index){
+if (!conf.index) {
     conf.index = path.join(conf.dest, 'index.js')
 
 }
@@ -130,14 +130,7 @@ function writeIndex(files, index, re) {
 }
 
 function writeObj(files, re) {
-    return `{
-
-${files.map((v)=> {
-        var ve = re ? v.replace(re, '') : v;
-        var req = JSON.stringify('./' + v);
-        return `${JSON.stringify(ve)}: require(${req})`;
-    }).join(',\n')}
-        };\n`;
+    return `{\n${files.map((v)=>`\t${JSON.stringify(v.replace(re, ''))}: require(${JSON.stringify('./' + v)})`).join(',\n')}\n};\n`;
 }
 
 function watcher(client, index, pattern, handler) {

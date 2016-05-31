@@ -14,8 +14,11 @@
     "type": "git",
     "url": "https://github.com/jspears/postcss-react-native.git"
   },
-  "scripts":{
-    "dist":"babel -s true src -d dist"
+  "scripts": {
+    "dist": "babel -s true src -d dist"
+  },
+  "bin": {
+    "prn": "./bin/prn.js"
   },
   "dependencies": {
     "css-border-property": "^1.1.0",
