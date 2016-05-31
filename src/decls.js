@@ -85,10 +85,14 @@ export const HANDLERS = {
             case 'wrap':
                 return enumer('wrap',
                     'nowrap')(postfix, value);
-            case '':
-                return value;
+            case 'grow':
+            case 'shrink':
+            case 'basis':
+
         }
-        return value;
+        return {
+            ['']: value
+        };
     },
     justify(postfix, value){
         switch (postfix) {
@@ -139,7 +143,12 @@ export const HANDLERS = {
     },
     overflow: enumer('visible', 'hidden'),
     backface: enumer('visiblility'),
-    background:enumer('color'),
+    background(postfix, value){
+        switch (postfix) {
+            case 'color':
+                return {[postfix]: value};
+        }
+    },
     font,
     transition,
     text(postfix, value){

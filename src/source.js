@@ -5,7 +5,7 @@ import FEATURES from './features';
 const quote = JSON.stringify.bind(JSON);
 
 const uc = (v = '')=> {
-    return v[0].toUpperCase() + v.substring(1);
+    return v  ? v[0].toUpperCase() + v.substring(1) : v;
 };
 
 const ucc = (v)=> {
@@ -14,7 +14,14 @@ const ucc = (v)=> {
 
 const camel = (arg, ...args)=> {
     const [a, ...rest] = arg.split('-');
-    return [a, ...rest.map(ucc), ...args.map(ucc)].join('');
+    const r = [a];
+    if (rest.length) {
+        r.push(...rest.filter(v=>!v).map(ucc));
+    }
+    if (args.length) {
+        r.push(...args.map(ucc));
+    }
+    return r.join('');
 };
 
 const vendorIf = (vendor, str)=> {
@@ -66,7 +73,8 @@ const pdecl = (root, type, values) => {
     return Object.keys(values).reduce((str, key)=> {
         const v = values[key];
         if (!isObjectLike(v)) {
-            return `${str}\n ${root}.${camel(type, key)} = ${rhs(v)};`;
+            const ct = camel(type, key);
+            return `${str}\n ${root}.${ct} = ${rhs(v)};`;
         } else if (Array.isArray(v)) {
             return `${str}\n ${root}.${camel(type, key)} = ${v.map(rhs).join(',')};`;
         } else if (typeof v === 'object') {
@@ -148,7 +156,7 @@ function compile(FEATURES, config){
   ${source(sources)};    
 }
 
-module.exports = StyleSheet.compile(compile(FEATURES, Dimensions.get('window')));
+module.exports = StyleSheet.create(compile(FEATURES, Dimensions.get('window')));
 `
 
 };

@@ -15,7 +15,8 @@
     "url": "https://github.com/jspears/postcss-react-native.git"
   },
   "scripts": {
-    "dist": "babel -s true src -d dist"
+    "dist": "babel -s true src -d dist",
+    "prepublish": "npm run dist"
   },
   "bin": {
     "prn": "./bin/prn.js"
