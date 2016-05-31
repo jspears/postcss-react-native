@@ -82,8 +82,6 @@ const pdecl = (root, type, values) => {
             return `${str}\n ${root}.${camel(type, key)} = ${v.map(rhs).join(',')};`;
         } else if (typeof v === 'object') {
             return Object.keys(v).reduce((ret, kv)=> {
-                //does not support styles
-                if (type === 'border' && kv === 'style') return ret;
                 return `${ret}\n  ${root}.${camel(type, key, kv)} = ${rhs(v[kv])};`;
             }, str);
         } else {
