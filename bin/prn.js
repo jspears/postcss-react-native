@@ -156,6 +156,9 @@ function subscribe(client, watch, relative_path, patterns, handler) {
             relative_root: relative_path
         }],
         function (error, resp) {
+            if ('warning' in resp) {
+                console.log('warning: ', resp.warning);
+            }
             if (error) {
                 // Probably an error in the subscription criteria
                 console.error('failed to subscribe: ', error);
@@ -165,6 +168,9 @@ function subscribe(client, watch, relative_path, patterns, handler) {
         });
 
     client.on('subscription', function (resp) {
+        if ('warning' in resp) {
+            console.log('warning: ', resp.warning);
+        }
         if (resp.subscription == subscribe) {
             console.log('file changed: ' + relative_path);
             handler(resp.files);
