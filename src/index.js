@@ -8,14 +8,9 @@ import source from './source';
 
 const parser = selectorParser();
 
-const merge = (v, v1)=> {
-    if (!v1) return v;
-    if (!v) return v1;
-
-};
 const DEFAULT_OPTS = {
     toJSON(obj, {source:{input:{file='rules'}}}){
-        return obj;
+        return source(obj);
     },
     toStyleSheet(obj, {source:{input:{file='rules'}}}){
     }
@@ -58,7 +53,7 @@ module.exports = postcss.plugin('postcss-react-native', function (opts) {
             });
         });
 
-        opts.toStyleSheet(source(opts.toJSON(rules, css)), css);
+        opts.toStyleSheet(opts.toJSON(rules, css), css);
     }
 })
 ;

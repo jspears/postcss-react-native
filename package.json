@@ -1,18 +1,21 @@
 {
   "name": "postcss-react-native",
-  "version": "3.0.0",
+  "version": "1.0.0",
   "description": "PostCSS plugin to create react stylesheets",
   "keywords": [
     "postcss",
     "css",
-    "postcss-plugin",
-    "opacity"
+    "react-native",
+    "postcss-plugin"
   ],
   "author": "Justin Spears<speajus@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jspears/postcss-react-native.git"
+  },
+  "scripts":{
+    "dist":"babel -s true src -d dist"
   },
   "dependencies": {
     "css-border-property": "^1.1.0",
@@ -28,12 +31,8 @@
     "babel-preset-es2015": "^6.9.0",
     "babel-register": "^6.9.0",
     "chai": "^3.2.0",
-    "gulp": "^3.9.0",
-    "gulp-mocha": "^2.1.3",
+    "fb-watchman": "^1.9.0",
     "lodash": "^3.10.1",
-    "mocha": "^2.2.5",
-  },
-  "scripts": {
-    "test": "gulp"
+    "mocha": "^2.2.5"
   }
 }
