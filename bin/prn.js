@@ -8,13 +8,12 @@ var args = process.argv.splice(2);
 var DEFAULT = {
     src: rdir('./src/styles'),
     dest: rdir('./dest/styles'),
-    index: rdir('./dest/styles.js'),
     once: false
 };
 var asFunctionSource = require('../dist/source').asFunctionSource;
 var conf = Object.assign({}, DEFAULT);
 function compile(name, input, output) {
-    var p = postcss(plugin({toJSON:asFunctionSource, toStyleSheet: output}));
+    var p = postcss(plugin({toJSON: asFunctionSource, toStyleSheet: output}));
     return p.process(input, {from: name, to: name});
 }
 function help(err) {
@@ -26,7 +25,7 @@ function help(err) {
   -1  --once  ${DEFAULT.once} Run once and exit .
   -w  --watch ${DEFAULT.src} Directory to watch 
   -d  --dest  ${DEFAULT.dest} Where to write transformed to
-  -i  --index ${DEFAULT.index}   
+  -i  --index ${path.join(DEFAULT.dest, 'index.js')}   
   
   config: 
   ${JSON.stringify(conf)}
@@ -56,6 +55,10 @@ for (var i = 0, l = args.length; i < l; i++) {
             break
     }
 }
+if (!conf.index){
+    conf.index = path.join(conf.dest, 'index.js')
+
+}
 
 function mkpath(dir) {
     var dirs = dir.split(path.sep);
@@ -69,40 +72,43 @@ function mkpath(dir) {
     }
     return file;
 }
-
-if (conf.once) {
-    handleCss(fs.readdirSync(conf.src).filter(v=>/\.s?css$/.test(v))).then(()=> {
-        process.exit(0);
-
-    });
+function init(cb) {
+    handleCss(fs.readdirSync(conf.src).filter(v=>/\.s?css$/.test(v))).then(cb);
 }
 
-var watchman = require('fb-watchman');
-var client = new watchman.Client();
+if (conf.once) {
+    init(()=>process.exit(0));
 
-console.log('watching', rdir(conf.src));
-client.capabilityCheck({optional: [], required: ['relative_root']}, function (error, resp) {
-    if (error) {
-        console.log(error);
-        client.end();
-        return;
-    }
+} else {
 
-    // Initiate the watchers
-    watcher(client, conf.src, ['*.scss', '*.css'], function (files) {
-        handleCss(files.map(v=>v.name));
+    var watchman = require('fb-watchman');
+
+    init(()=> {
+        console.log('watching', conf.src);
+        var client = new watchman.Client();
+        client.capabilityCheck({optional: [], required: ['relative_root']}, function (error, resp) {
+            if (error) {
+                console.log('ERROR', error);
+                client.end();
+                return;
+            }
+
+            // Initiate the watchers
+            watcher(client, conf.src, ['*.scss', '*.css'], function (files) {
+                console.log('watching', files);
+                handleCss(files.map(v=>v.name));
+            });
+        });
     });
-});
 
+}
 function handleCss(files) {
     const all = files.map((file)=> {
         if (/\.s?css/.test(file)) {
             const read = fs.readFileSync(path.join(conf.src, file)) + '';
             return compile(file, read, function (source) {
-                console.log('source', source);
                 try {
                     var f = mkpath(path.join(conf.dest, file + '.js'));
-
                     fs.writeFileSync(path.join(conf.dest, f), source);
                 } catch (e) {
                     console.warn('could not write ', file);
@@ -120,10 +126,10 @@ function handleCss(files) {
 function writeIndex(files, index, re) {
     console.log('writing', index, files.join(','));
     const file = mkpath(index);
-    fs.writeFileSync(path.join(conf.dest, file), `module.exports = ${writeObj(files, index, re)}`);
+    fs.writeFileSync(index, `module.exports = ${writeObj(files, re)}`);
 }
 
-function writeObj(files, index, re) {
+function writeObj(files, re) {
     return `{
 
 ${files.map((v)=> {
@@ -133,9 +139,11 @@ ${files.map((v)=> {
     }).join(',\n')}
         };\n`;
 }
+
 function watcher(client, index, pattern, handler) {
-    client.command(['watch-project', index], function (err, resp) {
-        subscribe(client, resp.watch, index, pattern, handler);
+    client.command(['watch-project', rdir()], function (err, resp) {
+        const rel = path.relative(rdir(), index)
+        subscribe(client, resp.watch, rel, pattern, handler);
     });
 }
 
