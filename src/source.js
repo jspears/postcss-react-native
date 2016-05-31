@@ -5,7 +5,7 @@ import FEATURES from './features';
 const quote = JSON.stringify.bind(JSON);
 
 const uc = (v = '')=> {
-    return v  ? v[0].toUpperCase() + v.substring(1) : v;
+    return v ? v[0].toUpperCase() + v.substring(1) : v;
 };
 
 const ucc = (v)=> {
@@ -66,11 +66,14 @@ const isObjectLike = (value)=> {
 };
 
 const pdecl = (root, type, values) => {
+    if (type === 'transition') {
+        return `if (!transition) var transition = []; transition.push.apply(transition, ${JSON.stringify(values)});`;
+    }
     if (!isObjectLike(values)) {
         const vvv = rhs(values);
         return `${root}.${camel(type)} = ${vvv};`;
     }
-    return Object.keys(values).reduce((str, key)=> {
+    const dstr = Object.keys(values).reduce((str, key)=> {
         const v = values[key];
         if (!isObjectLike(v)) {
             const ct = camel(type, key);
@@ -79,13 +82,23 @@ const pdecl = (root, type, values) => {
             return `${str}\n ${root}.${camel(type, key)} = ${v.map(rhs).join(',')};`;
         } else if (typeof v === 'object') {
             return Object.keys(v).reduce((ret, kv)=> {
-                return `${str}\n  ${root}.${camel(type, key, kv)} = ${rhs(v[kv])};`;
+                //does not support styles
+                if (type === 'border' && kv === 'style') return ret;
+                return `${ret}\n  ${root}.${camel(type, key, kv)} = ${rhs(v[kv])};`;
             }, str);
         } else {
             console.log('wtf?', v);
         }
         return str;
     }, '');
+    return dstr;
+};
+
+const writeDecls = (decls = [], base = '', start = '')=> {
+    return decls.reduce((str, decl)=> {
+        const declStr = vendorIf(decl.vendor, `${pdecl(base, decl.type, decl.values)}`);
+        return `\n${str}\n${declStr}`
+    }, start);
 };
 
 const writeCSS = (css) => {
@@ -140,7 +153,8 @@ const px = 1,
       vmax: Math.max(vw, vh)
 };
 ${sources.map(writeSheet).join('\n')}
-            
+${sources.map(namespaceToRequire).join('\n')}
+${sources.map(tagsToType).join('\n')}            
 return css;        
         `
 };
@@ -153,14 +167,68 @@ var Dimensions = ReactNative.Dimensions;
 var StyleSheet = ReactNative.StyleSheet;
 
 function compile(FEATURES, config){
-  ${source(sources)};    
+  ${namespaceToRequire(sources)};
+  ${source(sources)} 
+  ${tagsToType(sources)}
 }
 
 module.exports = StyleSheet.create(compile(FEATURES, Dimensions.get('window')));
 `
 
 };
+export const namespaceToRequire = ({namespaces})=> {
+    if (!namespaces) return '';
+    const keys = Object.keys(namespaces);
+    if (keys.length === 0) {
+        return '';
+    }
+    const str = keys.map((key)=> {
+        const [pkg, dots] = namespaces[key].split('.', 2);
 
+        return `pkgs.${key} = require(${JSON.stringify(pkg)})${dots ? '.' + dots : ''}`
+    }).join(';\n');
+
+
+    return `
+    if (!pkgs) var pkgs = {};
+    if (!React) var React = require('react');
+    ${str}
+ `
+};
+export const buildAnimation = (transition)=> {
+
+}
+export const tagsToType = ({tags})=> {
+    if (!tags) return '';
+    const keys = Object.keys(tags);
+    if (keys.length === 0) {
+        return '';
+    }
+    return keys.map((key)=> {
+        const val = tags[key];
+        return `
+    (function(exports, _style){
+
+     ${writeDecls(val.decls, '_style')};
+         
+      exports[${JSON.stringify(key)}] = React.createClass({
+       displayName: ${JSON.stringify(key)},
+       render(){
+            var props = Object.assign({}, this.props);
+            delete props.children;
+            props.style = _style;
+            return React.createElement(pkgs.${val.namespace}, props, children);  
+       }
+    
+    });
+    })(module.exports, {});
+`
+    }).join(';\n')
+};
+
+export const asClassSource = (sources = [])=> {
+
+};
 export default function compile(sources) {
     const src = source(sources);
     try {

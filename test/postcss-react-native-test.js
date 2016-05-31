@@ -3,12 +3,17 @@ import postcss from 'postcss';
 import {expect} from 'chai';
 import FEATURES from '../src/features';
 import plugin from '../src/index';
+import compile from '../src/source'
 
-const test = function (name, toStyleSheet) {
+const test = function (name, callback, toJSON = v=>v) {
     var input = read('test/fixtures/' + name + '.css');
 //    var output = read('test/fixtures/' + name + '.out.js');
 
-    return postcss(plugin({toStyleSheet})).process(input, {from: name, to: name});
+    return postcss(plugin({
+        toStyleSheet: function (json, css) {
+            callback(compile(json), css);
+        }, toJSON
+    })).process(input, {from: name, to: name});
     //.then(result=> expect(result).css.to.eql(output));
 };
 const testString = function (input, opts) {
@@ -35,7 +40,7 @@ describe('postcss-react-native', function () {
     it('should parse transition', function () {
         /**
          * TODO - Make transition conform to dela, duration, property,timing-function
-         * Initial value	as each of the properties of the shorthand:
+         * Initial value    as each of the properties of the shorthand:
          transition-delay: 0s
          transition-duration: 0s
          transition-property: all
@@ -72,7 +77,9 @@ describe('postcss-react-native', function () {
                                     ]
                                 }
                             ]
-                        }
+                        },
+                        "namespaces": {},
+                        "tags": {}
                     }
                 ]);
             },
@@ -165,6 +172,135 @@ describe('postcss-react-native', function () {
                     "marginBottom": 5
                 }
             });
+        });
+    });
+    it('should compile clazz', ()=> {
+        return test('clazz', (f, source)=> {
+            console.log(f._source);
+        });
+    });
+
+    it('should parse clazz', function () {
+        return test('clazz', v=>v, (css, source)=> {
+            console.log('css', JSON.stringify(css, null, 2));
+            expect(css).to.eql(css, [
+                {
+                    "namespaces": {
+                        "Native": "react-native.View"
+                    },
+                    "css": {
+                        "combine": [
+                            {
+                                "type": "height",
+                                "vendor": false,
+                                "values": "20px"
+                            }
+                        ],
+                        "appear": [
+                            {
+                                "type": "height",
+                                "vendor": false,
+                                "values": "0px"
+                            }
+                        ],
+                        "enter": [
+                            {
+                                "type": "height",
+                                "vendor": false,
+                                "values": "0px"
+                            }
+                        ],
+                        "appear-active": [
+                            {
+                                "type": "height",
+                                "vendor": false,
+                                "values": "100px"
+                            }
+                        ],
+                        "enter-active": [
+                            {
+                                "type": "height",
+                                "vendor": false,
+                                "values": "100px"
+                            }
+                        ],
+                        "leave": [
+                            {
+                                "type": "height",
+                                "vendor": false,
+                                "values": "100px"
+                            }
+                        ],
+                        "leave-active": [
+                            {
+                                "type": "height",
+                                "vendor": false,
+                                "values": "0px"
+                            }
+                        ]
+                    },
+                    "tags": {
+                        "View": {
+                            "classes": [
+                                "combine",
+                                "appear",
+                                "enter",
+                                "appear-active",
+                                "enter-active",
+                                "leave",
+                                "leave-active"
+                            ],
+                            "namespace": "Native",
+                            "decls": [
+                                {
+                                    "type": "flex",
+                                    "vendor": false,
+                                    "values": {
+                                        "": "1"
+                                    }
+                                },
+                                {
+                                    "type": "border",
+                                    "vendor": false,
+                                    "values": {
+                                        "top": {
+                                            "width": "1px",
+                                            "style": "solid",
+                                            "color": "red"
+                                        },
+                                        "right": {
+                                            "width": "1px",
+                                            "style": "solid",
+                                            "color": "red"
+                                        },
+                                        "bottom": {
+                                            "width": "1px",
+                                            "style": "solid",
+                                            "color": "red"
+                                        },
+                                        "left": {
+                                            "width": "1px",
+                                            "style": "solid",
+                                            "color": "red"
+                                        }
+                                    }
+                                },
+                                {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [
+                                        {
+                                            "property": "height",
+                                            "duration": 1000,
+                                            "timing-function": "ease-in-out",
+                                            "delay": 0
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }]);
         });
     });
 });
