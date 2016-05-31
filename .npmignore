@@ -2,6 +2,7 @@
 
 node_modules/
 
+out
 test/
 .travis.yml
 

@@ -15,11 +15,12 @@ See [PostCSS] docs for examples for your environment.
 Since most React Native environments do not have a css pipeline
 you can use the prn watcher.
 
-`
+```sh
  $ npm install postcss-react-native
- $ ./node_modules/.bin/prn -d dest -src ./path/to/css
+ $ ./node_modules/.bin/prn -d styles -w ./path/to/css
 
-`
+```
+
 ## Usage
 You should be able to include the said css via regular require
 
