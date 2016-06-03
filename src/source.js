@@ -150,7 +150,7 @@ const css = {},
       vmin:Math.min(vw, vh),
       vmax: Math.max(vw, vh) };
 ${rules.map(writeSheet).join('\n')}
-return css;`;
+`;
 };
 
 export const source = ({rules=[], imports, namespace})=> {
@@ -234,18 +234,40 @@ export const tagsToType = ({tags})=> {
         return '';
     }
     return keys.map((key)=> {
+        const stringKey = quote(key);
         const val = tags[key];
         return `
     (function(exports){
+       var StyleSheet = exports.StyleSheet || {}; 
+       var _style = ${calculate([{css: {__current: val.decls}}, {css: val.css}])};
+       var _sstyle;
+       //keep style in sync with
+       publish.subscribe( config =>{
+            _sstyle = _style(config);    
+       });
         
-       const _style = ${calculate([{css: {__current: val.decls}}, {css: val.css}])}
-       const _sstyle = StyleSheet.create(_style);   
-       exports[${JSON.stringify(key)}] = React.createClass({
-       displayName: ${JSON.stringify(key)},
+       function handleClass(start, className){
+          return (className || '').split(/\s+?/).reduce(function(ret, name){
+             if (StyleSheet[name]) ret.push(StyleSheet[name]);
+             if (_sstyle[name]) ret.push(_sstyle[name]);
+             return ret;
+           },start);
+       }
+       exports[${stringKey}] = React.createClass({
+       displayName: ${stringKey},
+       componentWillMount(){
+          //forceUpdate when orientation changes.
+          this._unlisten = publish.subscribe(this.forceUpdate.bind(this));
+       },
+       componentWillUnmount(){
+          //forceUpdate when orientation changes.
+          this._unlisten && this._unlisten();
+       },
        render(){
+               
             var props = Object.assign({}, this.props);
             delete props.children;
-            props.style = _sstyle;
+            props.style = handleClass(this.props.className, [_sstyle.__current]);
             return React.createElement(pkgs.${val.namespace}, props, children);  
        }
     

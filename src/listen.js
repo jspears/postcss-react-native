@@ -4,7 +4,7 @@ export default function () {
 
     const listen = (...args) => {
         for (const listen of listeners) {
-            listen.apply(this, args);
+            listen(...args);
         }
     };
     //add subscriptions
@@ -23,5 +23,14 @@ export default function () {
     //clear all listeners.
     listen.clear = (_listeners = listeners) => listeners.clear();
 
+    //After the value is triggered once, it stops listening.
+    listen.once = (cb)=> {
+        const _unlisten = listeners.subscribe((...args)=> {
+            const ret = cb(...args);
+            _listen();
+            return ret;
+        });
+        return _unlisten;
+    };
     return listen;
 }
