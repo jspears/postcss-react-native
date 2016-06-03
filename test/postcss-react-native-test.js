@@ -3,18 +3,83 @@ import postcss from 'postcss';
 import {expect} from 'chai';
 import FEATURES from '../src/features';
 import plugin from '../src/index';
-import compile from '../src/source'
+import source from '../src/source'
+import listen from '../src/listen'
 
-const test = function (name, callback, toJSON = v=>v) {
+const mockReactNative = (dimensions = {height: 500, width: 500, scale: 1}, OS = 'ios') => {
+    return {
+        StyleSheet: {
+            create(o){
+                return Object.keys(o).reduce((ret, key, idx)=> {
+                    ret[key] = o[key];
+                    return ret;
+                }, {});
+            }
+        },
+        Dimensions: {
+            get: function (str) {
+                return dimensions;
+            }
+        },
+        Platform:{
+            OS
+        }
+    }
+};
+const MockReact = {
+    createClass(...args){
+        return args;
+    }
+};
+
+
+const makeRequire = (dimensions, Platform)=> {
+    const mockModules = {
+        'react-native': mockReactNative(dimensions, Platform),
+        'react': MockReact,
+        'postcss-react-native/dist/listen': listen,
+        'postcss-react-native/dist/features': FEATURES
+    };
+    return (path)=> {
+        if (path in mockModules) {
+            return mockModules[path];
+        }
+        return require(path);
+
+    };
+};
+
+function compile(sources, require) {
+    const src = source(sources);
+    try {
+        const f = new Function(['require', 'exports'], src);
+        f._source = src;
+        return ()=> {
+            const exports = {};
+            try {
+                f(require, exports);
+            } catch (e) {
+                console.log('function', src, '\n\n', e.stack + '');
+            }
+            return exports;
+        }
+    } catch (e) {
+        console.log('source', src, '\n\n', e.stack + '');
+        throw e;
+    }
+}
+
+const test = function (name, callback = v => v, toJSON = v=>v) {
     var input = read('test/fixtures/' + name + '.css');
-//    var output = read('test/fixtures/' + name + '.out.js');
-
     return postcss(plugin({
         toStyleSheet: function (json, css) {
-            callback(compile(json), css);
+            callback((dimensions, platform = 'ios')=> {
+                return compile(json, makeRequire(dimensions, platform))();
+            }, css);
+
         }, toJSON
     })).process(input, {from: name, to: name});
-    //.then(result=> expect(result).css.to.eql(output));
+
 };
 const testString = function (input, opts) {
     return postcss(plugin(opts)).process(input, process, {from: 'from', to: 'to'});
@@ -48,40 +113,43 @@ describe('postcss-react-native', function () {
          */
         return testString('.t1 { transition: margin-left 4s, border 1s ease-in, opacity 30 linear 1s}', {
             toJSON(css, input){
-                expect(css).to.eql([
-                    {
-                        "css": {
-                            "t1": [
-                                {
-                                    "type": "transition",
-                                    "vendor": false,
-                                    "values": [
-                                        {
-                                            "property": "margin-left",
-                                            "duration": 4000,
-                                            "timing-function": "ease",
-                                            "delay": 0
-                                        },
-                                        {
-                                            "property": "border",
-                                            "duration": 1000,
-                                            "timing-function": "ease-in",
-                                            "delay": 0
-                                        },
-                                        {
-                                            "property": "opacity",
-                                            "duration": 30,
-                                            "timing-function": "linear",
-                                            "delay": 1000
-                                        }
-                                    ]
-                                }
-                            ]
-                        },
-                        "namespaces": {},
-                        "tags": {}
-                    }
-                ]);
+                expect(css).to.eql({
+                    "rules": [
+                        {
+                            "css": {
+                                "t1": [
+                                    {
+                                        "type": "transition",
+                                        "vendor": false,
+                                        "values": [
+                                            {
+                                                "property": "margin-left",
+                                                "duration": 4000,
+                                                "timing-function": "ease",
+                                                "delay": 0
+                                            },
+                                            {
+                                                "property": "border",
+                                                "duration": 1000,
+                                                "timing-function": "ease-in",
+                                                "delay": 0
+                                            },
+                                            {
+                                                "property": "opacity",
+                                                "duration": 30,
+                                                "timing-function": "linear",
+                                                "delay": 1000
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "tags": {}
+                        }
+                    ],
+                    "namespaces": {},
+                    "imports": []
+                });
             },
             toStyleSheet(json, input){
 
@@ -91,8 +159,9 @@ describe('postcss-react-native', function () {
 
     it('media query stuff for ios', function () {
         return test('media', (f, source)=> {
-            const css = f(FEATURES, {height: 1024, width: 768, scale: 1, vendor: 'ios'});
-            expect(css).to.eql({
+            const css = f({height: 1024, width: 768, scale: 1}, 'ios');
+
+            expect(css.StyleSheet).to.eql({
                 "stuff": {
                     "borderBottomWidth": 6.666666666666666,
                     "borderTopWidth": 3,
@@ -103,19 +172,27 @@ describe('postcss-react-native', function () {
                     "color": "yellow",
                     "borderLeftWidth": 5,
                     "borderRightWidth": 5,
-                    "borderTopColor": "green"
+                    "borderTopColor": "green",
+                    "borderTopStyle": "solid"
                 },
                 "other": {
                     "opacity": 0.5
                 }
             });
+        }, v=>v, {});
+    });
+    it('media should parse import', function () {
+        return test('import', v=>v, (f, source)=> {
+
+            expect(f).to.exist;
+            return f;
+
         });
     });
-
     it('media query stuff for android', function () {
         return test('media', (f, source)=> {
-            const css = f(FEATURES, {height: 1024, width: 768, scale: 1, vendor: 'android'});
-            expect(css).to.eql({
+            const css = f({height: 1024, width: 768, scale: 1}, 'android');
+            expect(css.default).to.eql({
                 "stuff": {
                     "borderBottomWidth": 6.666666666666666,
                     "borderTopWidth": 3,
@@ -126,7 +203,9 @@ describe('postcss-react-native', function () {
                     "color": "purble",
                     "borderLeftWidth": 5,
                     "borderRightWidth": 5,
-                    "borderTopColor": "green"
+                    "borderTopColor": "green",
+                    "borderTopStyle": "solid"
+
                 },
                 "other": {
                     "opacity": 0.5
@@ -136,8 +215,8 @@ describe('postcss-react-native', function () {
     });
     it('should parse font', ()=> {
         return test('font', (f, source)=> {
-            const css = f(FEATURES, {height: 1024, width: 768, scale: 1, vendor: 'android'});
-            expect(css).to.eql({
+            const css = f({height: 1024, width: 768, scale: 1}, 'android');
+            expect(css.default).to.eql({
                 "font1": {
                     "fontSize": 2,
                     "fontFamily": "Open Sans"
@@ -150,8 +229,8 @@ describe('postcss-react-native', function () {
     });
     it('should parse welcome', function () {
         return test('welcome', (f, source)=> {
-            const css = f(FEATURES, {height: 1024, width: 768, scale: 1, vendor: 'android'});
-            expect(css).to.eql({
+            const css = f({height: 1024, width: 768, scale: 1}, 'android');
+            expect(css.default).to.eql({
                 "container": {
                     "flex": 1,
                     "justifyContent": "center",
@@ -175,132 +254,511 @@ describe('postcss-react-native', function () {
         });
     });
     it('should compile clazz', ()=> {
-        return test('clazz', (f, source)=> {
-            console.log(f._source);
+        return test('clazz', (f)=> {
+            const css = f({height: 1024, width: 768, scale: 1});
+
+            return css;
         });
     });
 
     it('should parse clazz', function () {
         return test('clazz', v=>v, (css, source)=> {
-            console.log('css', JSON.stringify(css, null, 2));
-            expect(css).to.eql(css, [
-                {
-                    "namespaces": {
-                        "Native": "react-native.View"
-                    },
+            expect(css).to.eql({
+                "rules": [{
                     "css": {
-                        "combine": [
-                            {
-                                "type": "height",
-                                "vendor": false,
-                                "values": "20px"
-                            }
-                        ],
-                        "appear": [
-                            {
-                                "type": "height",
-                                "vendor": false,
-                                "values": "0px"
-                            }
-                        ],
-                        "enter": [
-                            {
-                                "type": "height",
-                                "vendor": false,
-                                "values": "0px"
-                            }
-                        ],
-                        "appear-active": [
-                            {
-                                "type": "height",
-                                "vendor": false,
-                                "values": "100px"
-                            }
-                        ],
-                        "enter-active": [
-                            {
-                                "type": "height",
-                                "vendor": false,
-                                "values": "100px"
-                            }
-                        ],
-                        "leave": [
-                            {
-                                "type": "height",
-                                "vendor": false,
-                                "values": "100px"
-                            }
-                        ],
-                        "leave-active": [
-                            {
-                                "type": "height",
-                                "vendor": false,
-                                "values": "0px"
-                            }
-                        ]
+                        "whatever": [{
+                            "type": "margin",
+                            "vendor": false,
+                            "values": {"top": "10px", "right": "10px", "bottom": "10px", "left": "10px"}
+                        }]
                     },
                     "tags": {
-                        "View": {
-                            "classes": [
-                                "combine",
-                                "appear",
-                                "enter",
-                                "appear-active",
-                                "enter-active",
-                                "leave",
-                                "leave-active"
-                            ],
-                            "namespace": "Native",
-                            "decls": [
-                                {
-                                    "type": "flex",
+                        "MyView": {
+                            "css": {
+                                "combine": [{
+                                    "type": "height",
                                     "vendor": false,
-                                    "values": {
-                                        "": "1"
-                                    }
-                                },
-                                {
+                                    "values": "20px"
+                                }, {"type": "flex", "vendor": false, "values": {"": "1"}}, {
                                     "type": "border",
                                     "vendor": false,
                                     "values": {
-                                        "top": {
-                                            "width": "1px",
-                                            "style": "solid",
-                                            "color": "red"
-                                        },
-                                        "right": {
-                                            "width": "1px",
-                                            "style": "solid",
-                                            "color": "red"
-                                        },
-                                        "bottom": {
-                                            "width": "1px",
-                                            "style": "solid",
-                                            "color": "red"
-                                        },
-                                        "left": {
-                                            "width": "1px",
-                                            "style": "solid",
-                                            "color": "red"
-                                        }
+                                        "top": {"width": "1px", "style": "solid", "color": "red"},
+                                        "right": {"width": "1px", "style": "solid", "color": "red"},
+                                        "bottom": {"width": "1px", "style": "solid", "color": "red"},
+                                        "left": {"width": "1px", "style": "solid", "color": "red"}
                                     }
-                                },
-                                {
+                                }, {
                                     "type": "transition",
                                     "vendor": false,
-                                    "values": [
-                                        {
-                                            "property": "height",
-                                            "duration": 1000,
-                                            "timing-function": "ease-in-out",
-                                            "delay": 0
-                                        }
-                                    ]
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 1000,
+                                        "timing-function": "ease-in-out",
+                                        "delay": 0
+                                    }]
+                                }, {
+                                    "type": "margin",
+                                    "vendor": false,
+                                    "values": {"top": "15px", "right": "15px", "bottom": "15px", "left": "15px"}
+                                }, {"type": "flex", "vendor": false, "values": {"direction": "column"}}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "0px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "100px"}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "100px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "0px"}],
+                                "whatever": [{"type": "height", "vendor": false, "values": "20px"}, {
+                                    "type": "flex",
+                                    "vendor": false,
+                                    "values": {"": "1"}
+                                }, {
+                                    "type": "border",
+                                    "vendor": false,
+                                    "values": {
+                                        "top": {"width": "1px", "style": "solid", "color": "red"},
+                                        "right": {"width": "1px", "style": "solid", "color": "red"},
+                                        "bottom": {"width": "1px", "style": "solid", "color": "red"},
+                                        "left": {"width": "1px", "style": "solid", "color": "red"}
+                                    }
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 1000,
+                                        "timing-function": "ease-in-out",
+                                        "delay": 0
+                                    }]
+                                }, {
+                                    "type": "margin",
+                                    "vendor": false,
+                                    "values": {"top": "15px", "right": "15px", "bottom": "15px", "left": "15px"}
+                                }, {"type": "flex", "vendor": false, "values": {"direction": "column"}}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "0px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "100px"}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "100px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "0px"}],
+                                "appear": [{"type": "height", "vendor": false, "values": "20px"}, {
+                                    "type": "flex",
+                                    "vendor": false,
+                                    "values": {"": "1"}
+                                }, {
+                                    "type": "border",
+                                    "vendor": false,
+                                    "values": {
+                                        "top": {"width": "1px", "style": "solid", "color": "red"},
+                                        "right": {"width": "1px", "style": "solid", "color": "red"},
+                                        "bottom": {"width": "1px", "style": "solid", "color": "red"},
+                                        "left": {"width": "1px", "style": "solid", "color": "red"}
+                                    }
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 1000,
+                                        "timing-function": "ease-in-out",
+                                        "delay": 0
+                                    }]
+                                }, {
+                                    "type": "margin",
+                                    "vendor": false,
+                                    "values": {"top": "15px", "right": "15px", "bottom": "15px", "left": "15px"}
+                                }, {"type": "flex", "vendor": false, "values": {"direction": "column"}}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "0px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "100px"}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "100px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "0px"}],
+                                "enter": [{"type": "height", "vendor": false, "values": "20px"}, {
+                                    "type": "flex",
+                                    "vendor": false,
+                                    "values": {"": "1"}
+                                }, {
+                                    "type": "border",
+                                    "vendor": false,
+                                    "values": {
+                                        "top": {"width": "1px", "style": "solid", "color": "red"},
+                                        "right": {"width": "1px", "style": "solid", "color": "red"},
+                                        "bottom": {"width": "1px", "style": "solid", "color": "red"},
+                                        "left": {"width": "1px", "style": "solid", "color": "red"}
+                                    }
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 1000,
+                                        "timing-function": "ease-in-out",
+                                        "delay": 0
+                                    }]
+                                }, {
+                                    "type": "margin",
+                                    "vendor": false,
+                                    "values": {"top": "15px", "right": "15px", "bottom": "15px", "left": "15px"}
+                                }, {"type": "flex", "vendor": false, "values": {"direction": "column"}}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "0px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "100px"}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "100px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "0px"}],
+                                "appear-active": [{"type": "height", "vendor": false, "values": "20px"}, {
+                                    "type": "flex",
+                                    "vendor": false,
+                                    "values": {"": "1"}
+                                }, {
+                                    "type": "border",
+                                    "vendor": false,
+                                    "values": {
+                                        "top": {"width": "1px", "style": "solid", "color": "red"},
+                                        "right": {"width": "1px", "style": "solid", "color": "red"},
+                                        "bottom": {"width": "1px", "style": "solid", "color": "red"},
+                                        "left": {"width": "1px", "style": "solid", "color": "red"}
+                                    }
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 1000,
+                                        "timing-function": "ease-in-out",
+                                        "delay": 0
+                                    }]
+                                }, {
+                                    "type": "margin",
+                                    "vendor": false,
+                                    "values": {"top": "15px", "right": "15px", "bottom": "15px", "left": "15px"}
+                                }, {"type": "flex", "vendor": false, "values": {"direction": "column"}}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "0px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "100px"}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "100px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "0px"}],
+                                "enter-active": [{"type": "height", "vendor": false, "values": "20px"}, {
+                                    "type": "flex",
+                                    "vendor": false,
+                                    "values": {"": "1"}
+                                }, {
+                                    "type": "border",
+                                    "vendor": false,
+                                    "values": {
+                                        "top": {"width": "1px", "style": "solid", "color": "red"},
+                                        "right": {"width": "1px", "style": "solid", "color": "red"},
+                                        "bottom": {"width": "1px", "style": "solid", "color": "red"},
+                                        "left": {"width": "1px", "style": "solid", "color": "red"}
+                                    }
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 1000,
+                                        "timing-function": "ease-in-out",
+                                        "delay": 0
+                                    }]
+                                }, {
+                                    "type": "margin",
+                                    "vendor": false,
+                                    "values": {"top": "15px", "right": "15px", "bottom": "15px", "left": "15px"}
+                                }, {"type": "flex", "vendor": false, "values": {"direction": "column"}}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "0px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "100px"}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "100px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "0px"}],
+                                "leave": [{"type": "height", "vendor": false, "values": "20px"}, {
+                                    "type": "flex",
+                                    "vendor": false,
+                                    "values": {"": "1"}
+                                }, {
+                                    "type": "border",
+                                    "vendor": false,
+                                    "values": {
+                                        "top": {"width": "1px", "style": "solid", "color": "red"},
+                                        "right": {"width": "1px", "style": "solid", "color": "red"},
+                                        "bottom": {"width": "1px", "style": "solid", "color": "red"},
+                                        "left": {"width": "1px", "style": "solid", "color": "red"}
+                                    }
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 1000,
+                                        "timing-function": "ease-in-out",
+                                        "delay": 0
+                                    }]
+                                }, {
+                                    "type": "margin",
+                                    "vendor": false,
+                                    "values": {"top": "15px", "right": "15px", "bottom": "15px", "left": "15px"}
+                                }, {"type": "flex", "vendor": false, "values": {"direction": "column"}}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "0px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "100px"}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "100px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "0px"}],
+                                "leave-active": [{"type": "height", "vendor": false, "values": "20px"}, {
+                                    "type": "flex",
+                                    "vendor": false,
+                                    "values": {"": "1"}
+                                }, {
+                                    "type": "border",
+                                    "vendor": false,
+                                    "values": {
+                                        "top": {"width": "1px", "style": "solid", "color": "red"},
+                                        "right": {"width": "1px", "style": "solid", "color": "red"},
+                                        "bottom": {"width": "1px", "style": "solid", "color": "red"},
+                                        "left": {"width": "1px", "style": "solid", "color": "red"}
+                                    }
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 1000,
+                                        "timing-function": "ease-in-out",
+                                        "delay": 0
+                                    }]
+                                }, {
+                                    "type": "margin",
+                                    "vendor": false,
+                                    "values": {"top": "15px", "right": "15px", "bottom": "15px", "left": "15px"}
+                                }, {"type": "flex", "vendor": false, "values": {"direction": "column"}}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "0px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "100px"}, {
+                                    "type": "height",
+                                    "vendor": false,
+                                    "values": "100px"
+                                }, {
+                                    "type": "transition",
+                                    "vendor": false,
+                                    "values": [{
+                                        "property": "height",
+                                        "duration": 500,
+                                        "timing-function": "ease-in",
+                                        "delay": 0
+                                    }]
+                                }, {"type": "height", "vendor": false, "values": "0px"}]
+                            },
+                            "decls": [{"type": "height", "vendor": false, "values": "20px"}, {
+                                "type": "flex",
+                                "vendor": false,
+                                "values": {"": "1"}
+                            }, {
+                                "type": "border",
+                                "vendor": false,
+                                "values": {
+                                    "top": {"width": "1px", "style": "solid", "color": "red"},
+                                    "right": {"width": "1px", "style": "solid", "color": "red"},
+                                    "bottom": {"width": "1px", "style": "solid", "color": "red"},
+                                    "left": {"width": "1px", "style": "solid", "color": "red"}
                                 }
-                            ]
+                            }, {
+                                "type": "transition",
+                                "vendor": false,
+                                "values": [{
+                                    "property": "height",
+                                    "duration": 1000,
+                                    "timing-function": "ease-in-out",
+                                    "delay": 0
+                                }]
+                            }, {
+                                "type": "margin",
+                                "vendor": false,
+                                "values": {"top": "15px", "right": "15px", "bottom": "15px", "left": "15px"}
+                            }, {"type": "flex", "vendor": false, "values": {"direction": "column"}}, {
+                                "type": "height",
+                                "vendor": false,
+                                "values": "0px"
+                            }, {
+                                "type": "transition",
+                                "vendor": false,
+                                "values": [{
+                                    "property": "height",
+                                    "duration": 500,
+                                    "timing-function": "ease-in",
+                                    "delay": 0
+                                }]
+                            }, {"type": "height", "vendor": false, "values": "100px"}, {
+                                "type": "height",
+                                "vendor": false,
+                                "values": "100px"
+                            }, {
+                                "type": "transition",
+                                "vendor": false,
+                                "values": [{
+                                    "property": "height",
+                                    "duration": 500,
+                                    "timing-function": "ease-in",
+                                    "delay": 0
+                                }]
+                            }, {"type": "height", "vendor": false, "values": "0px"}],
+                            "namespace": "View"
                         }
                     }
-                }]);
+                }], "namespaces": {"View": "react-native.View"}, "imports": []
+            });
+            return css;
         });
     });
 });

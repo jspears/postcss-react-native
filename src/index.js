@@ -7,7 +7,7 @@ import {parseMedia} from './mediaSelector';
 import source from './source';
 
 const parser = selectorParser();
-
+const importRe = /^\s*(?:url\(([^)]*)\)|"([^"]*)"|'([^']*)')(?:\s*(.*)?)$/;
 const DEFAULT_OPTS = {
     toJSON(obj, {source:{input:{file='rules'}}}){
         return source(obj);
@@ -15,71 +15,80 @@ const DEFAULT_OPTS = {
     toStyleSheet(obj, {source:{input:{file='rules'}}}){
     }
 };
+const createWalker = ({css, tags})=> {
+
+    return (rule) => {
+        const selector = parser.process(rule.selector).res;
+        let decls, tag;
+        selector.walk(function ({type, value, ns}) {
+            switch (type) {
+                case 'tag':
+                {
+                    tag = tags[value] || ( tags[value] = {css: {}, decls: []});
+                    if (ns) {
+                        tag.namespace = ns.replace('|', '');
+                    }
+                    decls = tag.decls;
+                    break;
+                }
+                case 'class':
+                {
+                    if (tag) {
+                        tag.css[value] = decls || (decls = []);
+                    } else {
+                        css[value] = decls || (decls = []);
+                    }
+                    break;
+                }
+                case 'selector':
+                    break;
+                default:
+                    console.warn(`selectors of type ${type} are not supported yet`);
+            }
+
+        });
+
+        rule.walkDecls((decl)=> {
+            decls && decls.push(parse(decl.prop, decl.value))
+        });
+
+    };
+};
 module.exports = postcss.plugin('postcss-react-native', function (opts) {
     opts = Object.assign({}, DEFAULT_OPTS, opts);
 
-    return (css, result) => {
-        const root = {};
-        const tags = {};
-        const namespaces = {};
-        const rules = [{css: root, tags, namespaces}];
-        css.walkRules((rule)=> {
+    return (src, result) => {
+
+        const ro = {css: {}, tags: {}};
+        const root = {
+            rules: [ro],
+            namespaces: {},
+            imports: []
+        };
+        const walker = createWalker(ro);
+        src.walkRules((rule)=> {
             if (rule.parent.type !== 'root') {
                 return;
             }
-            const selector = parser.process(rule.selector).res;
-            let current, tag;
-            selector.walk(function (t) {
-                if (t.type === 'tag') {
-                    tag = tags[t.value] || ( tags[t.value] = {classes: []});
-                    if (t.ns) {
-                        tag.namespace = t.ns.replace('|', '');
-                    }
-                } else if (t.type == 'class') {
-                    root[t.value] = current || (current = []);
-                    if (tag) {
-                        tag.classes.push(t.value);
-                    }
-                } else if (t.type == 'combinator') {
-                    console.warn('combinators are not supported (yet)');
-                }
-            });
-            if (tag && !current) {
-                tag.decls = current = [];
-            }
-            rule.walkDecls((decl)=> {
-                current && current.push(parse(decl.prop, decl.value))
-            });
-
+            walker(rule);
         });
-        css.walkAtRules((atrule)=> {
-            const css = {};
+        src.walkAtRules((atrule)=> {
+
             if (atrule.name === 'media') {
-                atrule.walkRules(rule=> {
-                    const selector = parser.process(rule.selector).res;
-                    let current;
-                    selector.walkClasses(function (r) {
-                        current = css[r.value] = (css[r.value] || []);
-                    });
-                    rule.walkDecls((decl)=> {
-                        current && current.push(parse(decl.prop, decl.value))
-                    });
-                });
-                rules.push({
-                    rules: parseMedia(atrule.params),
-                    css
-                });
+                const aro = {css: {}, tags: {}, expressions: parseMedia(atrule.params)};
+                root.rules.push(aro);
+                atrule.walkRules(createWalker(aro));
             } else if (atrule.name === 'namespace') {
                 const [prefix, ns] = postcss.list.space(atrule.params);
                 const pns = JSON.parse(ns);
-                namespaces[pns ? prefix : pns] = pns;
-            } else if (atrule.name === 'import'){
-                console.log('import', atrule.type);
-
+                root.namespaces[pns ? prefix : pns] = pns;
+            } else if (atrule.name === 'import') {
+                const [match, url, squote, quote, params] = importRe.exec(atrule.params);
+                root.imports.push({url: url || squote || quote, params});
             }
         });
 
-        opts.toStyleSheet(opts.toJSON(rules, css), css);
+        opts.toStyleSheet(opts.toJSON(root, src, result), src, result);
     }
 })
 ;

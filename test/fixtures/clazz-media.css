@@ -1,0 +1,41 @@
+@namespace View "react-native.View";
+
+@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) {
+
+    View|MyView .combine {
+        height: 20px;
+    }
+
+    View|MyView {
+        flex: 1;
+        border: 1px solid red;
+        transition: height 1s ease-in-out;
+    }
+
+    .whatever {
+        margin: 10px;
+    }
+
+    View|MyView.whatever {
+        margin: 15px;
+        flex-direction: column;
+    }
+
+    View|MyView.appear, View|MyView.enter {
+        height: 0px;
+        transition: height .5s ease-in;
+    }
+
+    View|MyView.appear-active, View|MyView.enter-active {
+        height: 100px;
+    }
+
+    View|MyView.leave {
+        height: 100px;
+        transition: height .5s ease-in;
+    }
+
+    View|MyView.leave-active {
+        height: 0px;
+    }
+}

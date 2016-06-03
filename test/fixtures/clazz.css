@@ -1,31 +1,37 @@
-@namespace Native "react-native.View";
+@namespace View "react-native.View";
 
-Native|View .combine {
+View|MyView .combine {
     height: 20px;
 }
 
-Native|View {
+View|MyView {
     flex: 1;
     border: 1px solid red;
     transition: height 1s ease-in-out;
 }
+.whatever {
+    margin: 10px;
+}
 
+View|MyView.whatever {
+    margin: 15px;
+    flex-direction: column;
+}
 
-
-View.appear, View.enter {
+View|MyView.appear, View|MyView.enter {
     height: 0px;
     transition: height .5s ease-in;
 }
 
-View.appear-active, View.enter-active {
+View|MyView.appear-active, View|MyView.enter-active {
     height: 100px;
 }
 
-View.leave {
+View|MyView.leave {
     height: 100px;
     transition: height .5s ease-in;
 }
 
-View.leave-active {
-    height:0px;
+View|MyView.leave-active {
+    height: 0px;
 }
