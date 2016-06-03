@@ -239,7 +239,7 @@ export const tagsToType = ({tags})=> {
         return `
     (function(exports){
        var StyleSheet = exports.StyleSheet || {}; 
-       var _style = ${calculate([{css: {__current: val.decls}}, {css: val.css}])};
+       var _style = ${calculate([{css: {__current: val.decls}}, {css: val.css, expressions:val.expressions}])};
        var _sstyle;
        //keep style in sync with
        publish.subscribe( config =>{
