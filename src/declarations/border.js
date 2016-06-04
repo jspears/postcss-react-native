@@ -71,7 +71,12 @@ const radius = (side, corner, values, obj = {})=> {
 };
 
 const handle = (type, values, obj = {})=> {
-    const [ , side, corner, prop] = /^(?:border)?(?:-(top|right|bottom|left))?(?:-(right|left))?(?:-(width|style|color|radius))?$/.exec(type);
+    const result = /^(?:border)?(?:-(top|right|bottom|left))?(?:-(right|left))?(?:-(width|style|color|radius))?$/.exec(type);
+    if (result == null) {
+        console.warn('do not understand ', type, values);
+        return null;
+    }
+    const [ , side, corner, prop] = result;
     if (prop === 'radius') {
         return radius(side, corner, values);
     } else {
@@ -88,7 +93,7 @@ const parse = (str) => {
 };
 
 export const border = (prefix, value)=> {
-    return handle( prefix ? `-${prefix}` : '', words(value));
+    return handle(prefix ? `-${prefix}` : '', words(value));
 };
 
 

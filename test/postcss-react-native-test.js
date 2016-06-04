@@ -29,6 +29,9 @@ const mockReactNative = (dimensions = {height: 500, width: 500, scale: 1}, OS = 
 const MockReact = {
     createClass(...args){
         return args;
+    },
+    createFactory(...args){
+        return args;
     }
 };
 
@@ -37,8 +40,8 @@ const makeRequire = (dimensions, Platform)=> {
     const mockModules = {
         'react-native': mockReactNative(dimensions, Platform),
         'react': MockReact,
-        'postcss-react-native/dist/listen': listen,
-        'postcss-react-native/dist/features': FEATURES
+        'postcss-react-native/dist/listen': {default: listen},
+        'postcss-react-native/dist/features': {default: FEATURES}
     };
     return (path)=> {
         if (path in mockModules) {
@@ -173,7 +176,7 @@ describe('postcss-react-native', function () {
                     "borderLeftWidth": 5,
                     "borderRightWidth": 5,
                     "borderTopColor": "green",
-                    "borderTopStyle": "solid"
+                    "borderStyle": "solid"
                 },
                 "other": {
                     "opacity": 0.5
@@ -204,7 +207,7 @@ describe('postcss-react-native', function () {
                     "borderLeftWidth": 5,
                     "borderRightWidth": 5,
                     "borderTopColor": "green",
-                    "borderTopStyle": "solid"
+                    "borderStyle": "solid"
 
                 },
                 "other": {
@@ -268,7 +271,13 @@ describe('postcss-react-native', function () {
             return css;
         });
     });
+    it('should parse component', function () {
+        return test('component',  (f, source)=> {
+            const ret = f({height: 1024, width: 768, scale: 1});
+            expect(ret).to.exist;
+        });
+    });
 });
-const json = (name)=>{
+const json = (name)=> {
     return JSON.parse(read(`test/fixtures/${name}.css.json`))
 };

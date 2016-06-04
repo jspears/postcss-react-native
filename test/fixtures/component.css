@@ -1,0 +1,15 @@
+@namespace Native "react-native.View";
+
+Native|View {
+    border: 2px solid red;
+    height: 20px;
+    width: 20px;
+}
+
+Native|View.green {
+    border-top-color: green;
+}
+
+.green {
+    border-bottom-color: green;
+}

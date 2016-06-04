@@ -82,6 +82,10 @@ const pdecl = (root, type, values) => {
             return `${str}\n ${root}.${camel(type, key)} = ${v.map(rhs).join(',')};`;
         } else if (typeof v === 'object') {
             return Object.keys(v).reduce((ret, kv)=> {
+                if (type === 'border' && kv === 'style'){
+                    //does not support different styles on different sides.
+                    return `${ret}\n  ${root}.${camel(type, kv)} = ${rhs(v[kv])};`;
+                }
                 return `${ret}\n  ${root}.${camel(type, key, kv)} = ${rhs(v[kv])};`;
             }, str);
         } else {
@@ -153,11 +157,10 @@ ${rules.map(writeSheet).join('\n')}
 `;
 };
 
-export const source = ({rules=[], imports, namespace})=> {
+export const source = ({rules=[], imports, namespaces})=> {
     return `
-     var listen = require('postcss-react-native/dist/listen');
-     var FEATURES = require('postcss-react-native/dist/features');
-     
+     var listen = require('postcss-react-native/dist/listen').default;
+     var FEATURES = require('postcss-react-native/dist/features').default;
      
      Object.defineProperty(exports, "__esModule", {
             value: true
@@ -169,7 +172,6 @@ export const source = ({rules=[], imports, namespace})=> {
 
      exports.update = publish;
      
-     var React = require('react');
      var ReactNative = require('react-native');
 
      var Dimensions = ReactNative.Dimensions;
@@ -179,14 +181,16 @@ export const source = ({rules=[], imports, namespace})=> {
      config.vendor = Platform.OS;
      
 
-     publish(config);
+ 
      
      //namespace require
-     ${namespaceToRequire(namespace)}
+     ${namespaceToRequire(namespaces)}
      
      //tagsToType
      ${rules.map(tagsToType).join('\n')}
 
+     //publish current config;
+     publish(config);
      //export default
      exports.default = exports.StyleSheet;
   
@@ -210,13 +214,13 @@ export const namespaceToRequire = (namespaces)=> {
     const str = keys.map((key)=> {
         const [pkg, dots] = namespaces[key].split('.', 2);
 
-        return `pkgs.${key} = require(${JSON.stringify(pkg)})${dots ? '.' + dots : ''}`
-    }).join(';\n');
+        return `pkgs.${key} = require(${JSON.stringify(pkg)})${dots ? '.' + dots : ''};`
+    }).join('\n');
 
 
     return `
-    if (!pkgs) var pkgs = {};
-    if (!React) var React = require('react');
+    var pkgs = {};
+    var React = require('react');
     ${str}
  `
 };
@@ -237,8 +241,7 @@ export const tagsToType = ({tags})=> {
         const stringKey = quote(key);
         const val = tags[key];
         return `
-    (function(exports){
-       var StyleSheet = exports.StyleSheet || {}; 
+(function(e){
        var _style = ${calculate([{css: {__current: val.decls}}, {css: val.css, expressions:val.expressions}])};
        var _sstyle;
        //keep style in sync with
@@ -248,12 +251,12 @@ export const tagsToType = ({tags})=> {
         
        function handleClass(start, className){
           return (className || '').split(/\s+?/).reduce(function(ret, name){
-             if (StyleSheet[name]) ret.push(StyleSheet[name]);
+             if (e.StyleSheet && e.StyleSheet[name]) ret.push(e.StyleSheet[name]);
              if (_sstyle[name]) ret.push(_sstyle[name]);
              return ret;
            },start);
        }
-       exports[${stringKey}] = React.createClass({
+       e[${stringKey}] = React.createClass({
        displayName: ${stringKey},
        componentWillMount(){
           //forceUpdate when orientation changes.
@@ -266,13 +269,14 @@ export const tagsToType = ({tags})=> {
        render(){
                
             var props = Object.assign({}, this.props);
+            
             delete props.children;
-            props.style = handleClass(this.props.className, [_sstyle.__current]);
-            return React.createElement(pkgs.${val.namespace}, props, children);  
+            props.style = handleClass( [_sstyle.__current], this.props.className);
+            return React.createElement(pkgs.${val.namespace}, props, this.props.children);  
        }
     
     });
-    })(exports);
+})(exports);
 `
     }).join(';\n')
 };

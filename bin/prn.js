@@ -10,17 +10,20 @@ var DEFAULT = {
     dest: rdir('./dest/styles'),
     once: false
 };
-var asFunctionSource = require('../dist/source').asFunctionSource;
+var source = require('../dist/source').default;
 var conf = Object.assign({}, DEFAULT);
 function compile(name, input, output) {
-    var p = postcss(plugin({toJSON: asFunctionSource, toStyleSheet: output}));
-    return p.process(input, {from: name, to: name});
+    var p = postcss(plugin({toJSON:source , toStyleSheet: output}))
+    return p.process(input, {from: name, to: name}).then(null, (e)=>{
+        console.trace('postcss caught an error', e.stack+'');
+    });
 }
 function help(err) {
     if (err) {
         console.warn(err);
     }
     console.log(`
+${process.argv.slice(2).join(' ')}  in ${rdir()}   
   -h  --help This message.
   -1  --once  ${DEFAULT.once} Run once and exit .
   -w  --watch ${DEFAULT.src} Directory to watch 
