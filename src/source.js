@@ -161,13 +161,22 @@ export const source = ({rules=[], imports, namespaces})=> {
     return `
      var listen = require('postcss-react-native/dist/listen').default;
      var FEATURES = require('postcss-react-native/dist/features').default;
-     
+     var RCTDeviceEventEmitter = require('RCTDeviceEventEmitter');
+     const publish = listen();
+     const unpublish = listen();
+     function makeConfig(){
+          var c = Dimensions.get('window');
+          c.vendor = Platform.OS;
+          return c;
+     }
+     RCTDeviceEventEmitter.addListener('didUpdateDimensions', function(update) {
+         publish(makeConfig());
+     });
+
      Object.defineProperty(exports, "__esModule", {
             value: true
      });
-     const publish = listen();
-     const unpublish = listen();
-
+     
      exports.unsubscribe = unpublish.subscribe(publish.property(exports, 'StyleSheet', ${calculate(rules)}));
 
      exports.update = publish;
@@ -177,9 +186,6 @@ export const source = ({rules=[], imports, namespaces})=> {
      var Dimensions = ReactNative.Dimensions;
      var StyleSheet = ReactNative.StyleSheet;
      var Platform = ReactNative.Platform;
-     var config = Dimensions.get('window');
-     config.vendor = Platform.OS;
-     
 
  
      
@@ -190,7 +196,7 @@ export const source = ({rules=[], imports, namespaces})=> {
      ${rules.map(tagsToType).join('\n')}
 
      //publish current config;
-     publish(config);
+     publish(makeConfig());
      //export default
      exports.default = exports.StyleSheet;
   
@@ -260,10 +266,13 @@ export const tagsToType = ({tags})=> {
        displayName: ${stringKey},
        componentWillMount(){
           //forceUpdate when orientation changes.
-          this._unlisten = publish.subscribe(this.forceUpdate.bind(this));
+          var forceUpdate = this.forceUpdate.bind(this);
+          this._unlisten = publish.subscribe(function(){ 
+             forceUpdate()
+          });
        },
        componentWillUnmount(){
-          //forceUpdate when orientation changes.
+          //stop forceUpdate when unmounting.
           this._unlisten && this._unlisten();
        },
        render(){

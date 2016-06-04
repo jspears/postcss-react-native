@@ -24,7 +24,7 @@ const createWalker = ({css, tags})=> {
             switch (type) {
                 case 'tag':
                 {
-                    tag = tags[value] || ( tags[value] = {css: {}, decls: []});
+                    tag = tags[value] || ( tags[value] = {css: {}, decls: [], transitions:[]});
                     if (ns) {
                         tag.namespace = ns.replace('|', '');
                     }
