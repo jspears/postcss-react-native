@@ -1,0 +1,8 @@
+@namespace Text "react-native.Text";
+
+Text|StyledText {
+    color:red;
+}
+Text|StyledText:checked {
+    color:blue;
+}

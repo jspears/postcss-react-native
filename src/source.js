@@ -105,12 +105,12 @@ const writeDecls = (decls = [], base = '', start = '')=> {
 
 const writeCSS = (css, i) => {
     return Object.keys(css).map((key)=> {
-        const base = `css[${i}][${JSON.stringify(key)}]`;
+        const base = `css[${JSON.stringify(key)}]`;
         const decls = css[key];
         return decls.reduce((str, decl)=> {
             const declStr = vendorIf(decl.vendor, `${pdecl(base, decl.type, decl.values)}`);
             return `\n${str}\n${declStr}`
-        }, `if (!css[${i}]) css[${i}] = {}; if(!${base}) ${base} = {};\n`);
+        }, `if (!css) var css = {};\nif(!${base}) ${base} = {};\n`);
     }).filter(v=>!/^\s*$/.test(v)).join(';\n')
 };
 
@@ -129,21 +129,22 @@ const writeSheet = ({css, expressions = []}, idx) => {
     let str = '';
     if (expressions.length) {
         //expression check
-        str += `if (${expressions.map(writeExpressions).join(' || ')}){\nmatches.push(${idx});\n}`;
+        str += `if (${expressions.map(writeExpressions).join(' || ')}){\n${writeCSS(css, idx)}\n}`;
+    } else {
+        str += writeCSS(css, idx);
     }
-    str += writeCSS(css, idx);
     return str;
 };
 
 export const sheet = (rules = [])=> {
     return `
-const css = [],
-      matches = [0],
-      px = 1, 
+const px = 1, 
       vendor = config.vendor,
       inch = 96,
       vh = config.height / 100,
       vw = config.width / 100, 
+      percentageW = config.componentWidth || config.width,
+      percentageH = config.componentHeight || 0,
       units = {
       px : px,
       vh : vh,
@@ -235,20 +236,17 @@ export const PSEUDO = {
             `
         }
 
-    }
+    },
+    ':before': {
+
+    },
+    ':after': {}
 };
 
 export const calculate = (rules)=> {
     return `function(config){
          ${sheet(rules)}
-        var _css = matches.reduce((ret, m)=>{
-           return  Object.keys(css[m]).reduce((o, k)=>{
-              var c = o[k] || (o[k]={});
-              Object.assign(c, css[m][k]);
-              return o;
-           }, ret);
-        },{});
-        return StyleSheet.create(_css);
+        return StyleSheet.create(css);
     }`
 };
 
@@ -306,14 +304,14 @@ export const tagsToType = (tags)=> {
     return keys.map((key)=> {
         const stringKey = quote(key);
         let namespace = '';
-        let pseudos = [];
+        let pseudos = {};
         const valArray = tags[key].reduce((ret, {tag, css, expressions}) => {
             if (tag.namespace) {
                 namespace = tag.namespace;
             }
             if (tag.pseudo) {
                 ret.push(... Object.keys(tag.pseudo).map((pk)=> {
-                    pseudos.push(pk);
+                    (pseudos[pk] || (pseudos[pk]= [])).push(tag.pseudo);
                     return {css: {[ `__current${pk}` ]: tag.pseudo[pk]}, expressions: tag.expressions}
                 }));
 
@@ -356,15 +354,18 @@ export const tagsToType = (tags)=> {
           //stop forceUpdate when unmounting.
           this._unlisten && this._unlisten();
        },
-       ${pseudos.map((v=>PSEUDO[v] ? PSEUDO[v].handler() : '' )).concat(null).join(',\n')}
+       onLayout(e){
+         console.log('layout', e);
+       },
+       ${Object.keys(pseudos).map((v=>PSEUDO[v] && PSEUDO[v].handler ? PSEUDO[v].handler(pseudos[v]) : '' )).concat(null).join(',\n')}
        render(){
-               
-            var props = Object.assign({}, this.props);
             
+            var children = this.props.children;   
+            var props = Object.assign({}, this.props);
             delete props.children;
             props.style = handleClass( [_sstyle.__current], this.props.className);
-            ${pseudos.map((v=>PSEUDO[v] ? PSEUDO[v].prop() : '')).join(';\n')}
-            return React.createElement(pkgs.${namespace}, props, this.props.children);  
+            ${Object.keys(pseudos).map((v=>PSEUDO[v] && PSEUDO[v].prop() ? PSEUDO[v].prop(pseudos[v]) : '')).join(';\n')}
+            return React.createElement(pkgs.${namespace}, props, children);  
        }
     
     });
