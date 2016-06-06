@@ -26,6 +26,7 @@ although it shares no code.
 * filter properties not supported by react-native.  Tricky, because
   it component dependent.
 * Support regular react (currently only react-native).
+* Support background images.
 
 ## Usage
 

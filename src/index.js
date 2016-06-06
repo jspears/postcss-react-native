@@ -94,7 +94,6 @@ module.exports = postcss.plugin('postcss-react-native', function (opts) {
             }
         });
 
-        opts.toStyleSheet(opts.toJSON(root, src, result), src, result);
+        return opts.toStyleSheet(opts.toJSON(root, src, result), src, result);
     }
-})
-;
+});

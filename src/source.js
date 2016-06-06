@@ -1,6 +1,5 @@
 "use strict";
 import unit from './unit';
-import FEATURES from './features';
 
 const quote = JSON.stringify.bind(JSON);
 
@@ -136,6 +135,27 @@ const writeSheet = ({css, expressions = []}, idx) => {
     return str;
 };
 
+export const writeImports = (imports = []) => {
+    if (!imports || imports.length == 0) {
+        return 'var IMPORTS = []';
+    }
+    let str = imports.reduce((ret, {url})=> {
+        return `
+         ${ret}importCss(require(${quote(url)}));\n`;
+    }, '');
+    return `
+          var IMPORTS = [];
+          function importCss(imp){
+              IMPORTS.push(imp.default);
+              Object.keys(imp).map((key)=>{
+                 if (key === 'default' || key == 'onChange' || key === 'DimensionComponent' || key == 'unpublish')
+                   return;
+                 exports[key] = imp[key]; 
+              });
+          }
+          ${str}          
+`;
+};
 export const sheet = (rules = [])=> {
     return `
 const px = 1, 
@@ -163,6 +183,7 @@ export const source = ({rules=[], imports, namespaces})=> {
     return `
      var listen = require('postcss-react-native/dist/listen').default;
      var FEATURES = require('postcss-react-native/dist/features').default;
+     var flatten = require('postcss-react-native/dist/flatten').default;
      var RCTDeviceEventEmitter = require('RCTDeviceEventEmitter');
      const publish = listen();
      const unpublish = listen();
@@ -178,7 +199,8 @@ export const source = ({rules=[], imports, namespaces})=> {
      Object.defineProperty(exports, "__esModule", {
             value: true
      });
-     
+     //imports
+     ${writeImports(imports)}
      exports.unsubscribe = unpublish.subscribe(publish.property(exports, 'StyleSheet', ${calculate(rules)}));
 
      exports.onChange = publish;
@@ -203,6 +225,8 @@ export const source = ({rules=[], imports, namespaces})=> {
           throw new Error("Should implement render");
         }
      });
+     
+     //
  
      
      //namespace require
@@ -222,7 +246,8 @@ export const source = ({rules=[], imports, namespaces})=> {
 export const PSEUDO = {
     ':checked': {
         handler(){
-            return `handleChecked:function(){
+            return `
+            handleChecked(){
                 this.setState({checked:!(this.state && this.state.checked)});
             }`
         },
@@ -237,16 +262,16 @@ export const PSEUDO = {
         }
 
     },
-    ':before': {
-
-    },
+    ':before': {},
     ':after': {}
 };
 
 export const calculate = (rules)=> {
     return `function(config){
+         if (!css) var css = {};
          ${sheet(rules)}
-        return StyleSheet.create(css);
+         
+        return StyleSheet.create(flatten(IMPORTS, css));
     }`
 };
 
@@ -311,7 +336,7 @@ export const tagsToType = (tags)=> {
             }
             if (tag.pseudo) {
                 ret.push(... Object.keys(tag.pseudo).map((pk)=> {
-                    (pseudos[pk] || (pseudos[pk]= [])).push(tag.pseudo);
+                    (pseudos[pk] || (pseudos[pk] = [])).push(tag.pseudo);
                     return {css: {[ `__current${pk}` ]: tag.pseudo[pk]}, expressions: tag.expressions}
                 }));
 

@@ -1,4 +1,4 @@
-import {testString, test, json} from './support';
+import {testString, testTransform, test, json} from './support';
 import {expect} from 'chai';
 
 describe('postcss-react-native', function () {
@@ -189,4 +189,14 @@ describe('postcss-react-native', function () {
             expect(ret).to.exist;
         });
     });
+    it('should parse real-import', function (done) {
+        return testTransform('real-import', (f)=> {
+            return f({height: 1024, width: 768, scale: 1}).then((ret, css, src)=> {
+                console.log(src);
+                expect(ret).to.exist;
+                done();
+            }, done);
+        });
+    });
+
 });
