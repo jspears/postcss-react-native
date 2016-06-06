@@ -1036,7 +1036,8 @@
               "values": "0px"
             }
           ],
-          "namespace": "View"
+          "namespace": "View",
+          "transitions":[]
         }
       }
     }

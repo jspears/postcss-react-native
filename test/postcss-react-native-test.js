@@ -1,100 +1,5 @@
-import fs from 'fs';
-import postcss from 'postcss';
+import {testString, test, json} from './support';
 import {expect} from 'chai';
-import FEATURES from '../src/features';
-import plugin from '../src/index';
-import source from '../src/source'
-import listen from '../src/listen'
-
-const mockReactNative = (dimensions = {height: 500, width: 500, scale: 1}, OS = 'ios') => {
-    return {
-        StyleSheet: {
-            create(o){
-                return Object.keys(o).reduce((ret, key, idx)=> {
-                    ret[key] = o[key];
-                    return ret;
-                }, {});
-            }
-        },
-        Dimensions: {
-            get: function (str) {
-                return dimensions;
-            }
-        },
-        Platform: {
-            OS
-        }
-    }
-};
-const MockReact = {
-    createClass(...args){
-        return args;
-    },
-    createFactory(...args){
-        return args;
-    }
-};
-
-
-const makeRequire = (dimensions, Platform)=> {
-    const mockModules = {
-        'react-native': mockReactNative(dimensions, Platform),
-        'react': MockReact,
-        'postcss-react-native/dist/listen': {default: listen},
-        'postcss-react-native/dist/features': {default: FEATURES}
-    };
-    return (path)=> {
-        if (path in mockModules) {
-            return mockModules[path];
-        }
-        return require(path);
-
-    };
-};
-
-function compile(sources, require) {
-    const src = source(sources);
-    try {
-        const f = new Function(['require', 'exports'], src);
-        f._source = src;
-        return ()=> {
-            const exports = {};
-            try {
-                f(require, exports);
-            } catch (e) {
-                console.log('function', src, '\n\n', e.stack + '');
-            }
-            return exports;
-        }
-    } catch (e) {
-        console.log('source', src, '\n\n', e.stack + '');
-        throw e;
-    }
-}
-
-const test = function (name, callback = v => v, toJSON = v=>v) {
-    var input = read('test/fixtures/' + name + '.css');
-    return postcss(plugin({
-        toStyleSheet: function (json, css) {
-            callback((dimensions, platform = 'ios')=> {
-                return compile(json, makeRequire(dimensions, platform))();
-            }, css);
-
-        }, toJSON
-    })).process(input, {from: name, to: name});
-
-};
-const testString = function (input, opts) {
-    return postcss(plugin(opts)).process(input, process, {from: 'from', to: 'to'});
-};
-//use for debugging;
-const toJSON = (obj, {source:{input:{file='rules'}}})=> {
-    console.log(`export const ${file.split('/').pop()} = ${JSON.stringify(obj, null, 2)}`);
-    return obj;
-};
-var read = function (path) {
-    return fs.readFileSync(path, 'utf-8');
-};
 
 describe('postcss-react-native', function () {
     /*
@@ -272,12 +177,16 @@ describe('postcss-react-native', function () {
         });
     });
     it('should parse component', function () {
-        return test('component',  (f, source)=> {
+        return test('component', (f, source)=> {
+            const ret = f({height: 1024, width: 768, scale: 1});
+            expect(ret).to.exist;
+        });
+    });
+
+    it('should parse clazz-pseudo', function () {
+        return test('clazz-pseudo', (f, source)=> {
             const ret = f({height: 1024, width: 768, scale: 1});
             expect(ret).to.exist;
         });
     });
 });
-const json = (name)=> {
-    return JSON.parse(read(`test/fixtures/${name}.css.json`))
-};

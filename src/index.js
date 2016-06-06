@@ -24,13 +24,19 @@ const createWalker = ({css, tags})=> {
             switch (type) {
                 case 'tag':
                 {
-                    tag = tags[value] || ( tags[value] = {css: {}, decls: [], transitions:[]});
+                    tag = tags[value] || ( tags[value] = {css: {}, decls: [], transitions: []});
                     if (ns) {
                         tag.namespace = ns.replace('|', '');
                     }
                     decls = tag.decls;
                     break;
                 }
+                case 'pseudo':
+                    if (tag) {
+                        tag.pseudo = tag.pseudo || (tag.pseudo = {});
+                        decls = tag.pseudo[value] || (tag.pseudo[value] = []);
+                    }
+                    break;
                 case 'class':
                 {
                     if (tag) {

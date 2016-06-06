@@ -82,7 +82,7 @@ const pdecl = (root, type, values) => {
             return `${str}\n ${root}.${camel(type, key)} = ${v.map(rhs).join(',')};`;
         } else if (typeof v === 'object') {
             return Object.keys(v).reduce((ret, kv)=> {
-                if (type === 'border' && kv === 'style'){
+                if (type === 'border' && kv === 'style') {
                     //does not support different styles on different sides.
                     return `${ret}\n  ${root}.${camel(type, kv)} = ${rhs(v[kv])};`;
                 }
@@ -103,14 +103,14 @@ const writeDecls = (decls = [], base = '', start = '')=> {
     }, start);
 };
 
-const writeCSS = (css) => {
+const writeCSS = (css, i) => {
     return Object.keys(css).map((key)=> {
-        const base = `css[${JSON.stringify(key)}]`;
+        const base = `css[${i}][${JSON.stringify(key)}]`;
         const decls = css[key];
         return decls.reduce((str, decl)=> {
             const declStr = vendorIf(decl.vendor, `${pdecl(base, decl.type, decl.values)}`);
             return `\n${str}\n${declStr}`
-        }, `if(!${base}) ${base} = {};\n`);
+        }, `if (!css[${i}]) css[${i}] = {}; if(!${base}) ${base} = {};\n`);
     }).filter(v=>!/^\s*$/.test(v)).join(';\n')
 };
 
@@ -128,16 +128,17 @@ const writeExpressions = ({expressions, inverse})=> {
 const writeSheet = ({css, expressions = []}, idx) => {
     let str = '';
     if (expressions.length) {
-        str += `if (${expressions.map(writeExpressions).join(' || ')}){\n${writeCSS(css)}\n}`;
-    } else {
-        str += `${writeCSS(css)}`;
+        //expression check
+        str += `if (${expressions.map(writeExpressions).join(' || ')}){\nmatches.push(${idx});\n}`;
     }
+    str += writeCSS(css, idx);
     return str;
 };
 
 export const sheet = (rules = [])=> {
     return `
-const css = {}, 
+const css = [],
+      matches = [0],
       px = 1, 
       vendor = config.vendor,
       inch = 96,
@@ -179,21 +180,35 @@ export const source = ({rules=[], imports, namespaces})=> {
      
      exports.unsubscribe = unpublish.subscribe(publish.property(exports, 'StyleSheet', ${calculate(rules)}));
 
-     exports.update = publish;
+     exports.onChange = publish;
      
      var ReactNative = require('react-native');
 
      var Dimensions = ReactNative.Dimensions;
      var StyleSheet = ReactNative.StyleSheet;
      var Platform = ReactNative.Platform;
-
+     var React = require('react');
+     exports.DimensionComponent = React.createClass({
+        componentWillMount:function() {
+            var self = this;
+            this._listen = publish.subscribe(function(){
+              self.forceUpdate()
+            });
+        },
+        componentWillUnmount:function() {
+            this._listen && this._listen();
+        },
+        render(){
+          throw new Error("Should implement render");
+        }
+     });
  
      
      //namespace require
      ${namespaceToRequire(namespaces)}
      
      //tagsToType
-     ${rules.map(tagsToType).join('\n')}
+     ${tagsToTypes(rules)}
 
      //publish current config;
      publish(makeConfig());
@@ -203,11 +218,37 @@ export const source = ({rules=[], imports, namespaces})=> {
   `
 };
 
+export const PSEUDO = {
+    ':checked': {
+        handler(){
+            return `handleChecked:function(){
+                this.setState({checked:!(this.state && this.state.checked)});
+            }`
+        },
+        prop(){
+            return `
+            props.onPress = this.handleChecked;
+            if (this.state && this.state.checked){
+              
+                props.style = handleClass(props.style, '__current:checked');
+            }
+            `
+        }
+
+    }
+};
 
 export const calculate = (rules)=> {
     return `function(config){
          ${sheet(rules)}
-        return StyleSheet.create(css);
+        var _css = matches.reduce((ret, m)=>{
+           return  Object.keys(css[m]).reduce((o, k)=>{
+              var c = o[k] || (o[k]={});
+              Object.assign(c, css[m][k]);
+              return o;
+           }, ret);
+        },{});
+        return StyleSheet.create(_css);
     }`
 };
 
@@ -226,7 +267,6 @@ export const namespaceToRequire = (namespaces)=> {
 
     return `
     var pkgs = {};
-    var React = require('react');
     ${str}
  `
 };
@@ -237,18 +277,59 @@ export const buildAnimationSrc = (transition)=> {
         return ret;
     }, {});
 };
-export const tagsToType = ({tags})=> {
+/**
+ * Any rule may have a tag in it.  If it does, than
+ * we need to collapse them. This little dusy does that.
+ * @param rules
+ */
+export const tagsToTypes = (rules = [])=> {
+
+    return tagsToType(rules.reduce((ret, {tags, expressions})=> {
+        if (tags) {
+            return Object.keys(tags).reduce((r, key)=> {
+                (r[key] || (r[key] = [])).push({tag: tags[key], expressions});
+                return r;
+            }, ret);
+        }
+        return ret;
+    }, {}));
+
+};
+
+export const tagsToType = (tags)=> {
     if (!tags) return '';
     const keys = Object.keys(tags);
     if (keys.length === 0) {
         return '';
     }
+
     return keys.map((key)=> {
         const stringKey = quote(key);
-        const val = tags[key];
+        let namespace = '';
+        let pseudos = [];
+        const valArray = tags[key].reduce((ret, {tag, css, expressions}) => {
+            if (tag.namespace) {
+                namespace = tag.namespace;
+            }
+            if (tag.pseudo) {
+                ret.push(... Object.keys(tag.pseudo).map((pk)=> {
+                    pseudos.push(pk);
+                    return {css: {[ `__current${pk}` ]: tag.pseudo[pk]}, expressions: tag.expressions}
+                }));
+
+            }
+            if (tag.decls) {
+                ret.push({css: {__current: tag.decls}, expressions: expressions});
+            } else {
+                ret.push({css, expressions});
+
+            }
+
+            return ret;
+        }, []);
         return `
 (function(e){
-       var _style = ${calculate([{css: {__current: val.decls}}, {css: val.css, expressions:val.expressions}])};
+       var _style = ${calculate(valArray)};
        var _sstyle;
        //keep style in sync with
        publish.subscribe( config =>{
@@ -275,13 +356,15 @@ export const tagsToType = ({tags})=> {
           //stop forceUpdate when unmounting.
           this._unlisten && this._unlisten();
        },
+       ${pseudos.map((v=>PSEUDO[v] ? PSEUDO[v].handler() : '' )).concat(null).join(',\n')}
        render(){
                
             var props = Object.assign({}, this.props);
             
             delete props.children;
             props.style = handleClass( [_sstyle.__current], this.props.className);
-            return React.createElement(pkgs.${val.namespace}, props, this.props.children);  
+            ${pseudos.map((v=>PSEUDO[v] ? PSEUDO[v].prop() : '')).join(';\n')}
+            return React.createElement(pkgs.${namespace}, props, this.props.children);  
        }
     
     });

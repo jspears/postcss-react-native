@@ -3,7 +3,7 @@
 Native|View {
     border: 2px solid red;
     height: 20px;
-    width: 20px;
+    width: 200px;
 }
 
 Native|View.green {
@@ -11,5 +11,17 @@ Native|View.green {
 }
 
 .green {
-    border-bottom-color: green;
+    margin:10px;
+}
+.text {
+    color:purple;
+}
+
+@media only screen and (orientation: landscape) {
+    .text {
+        color:red;
+    }
+    Native|View {
+        border-color: purple;
+    }
 }
