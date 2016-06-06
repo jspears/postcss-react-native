@@ -1,0 +1,10 @@
+@import './welcome.css';
+@import './component.css';
+
+.real {
+    border: 1px solid red;
+}
+
+.stuff {
+    color: chartreuse;
+}
