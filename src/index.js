@@ -5,6 +5,7 @@ import selectorParser from 'postcss-selector-parser';
 import {parse} from './decls';
 import {parseMedia} from './mediaSelector';
 import source from './source';
+import unescape from './util/unescape';
 
 const parser = selectorParser();
 const importRe = /^\s*(?:url\(([^)]*)\)|"([^"]*)"|'([^']*)')(?:\s*(.*)?)$/;
@@ -55,7 +56,9 @@ const createWalker = ({css, tags})=> {
         });
 
         rule.walkDecls((decl)=> {
-            decls && decls.push(parse(decl.prop, decl.value))
+            const d = parse(decl.prop, decl.value, tag, decl);
+            if (d != null)
+                decls && decls.push(d);
         });
 
     };
@@ -79,18 +82,58 @@ module.exports = postcss.plugin('postcss-react-native', function (opts) {
             walker(rule);
         });
         src.walkAtRules((atrule)=> {
+            const {name, params} = atrule;
+            switch (name) {
+                case 'media':
+                {
+                    const aro = {css: {}, tags: {}, expressions: parseMedia(params)};
+                    root.rules.push(aro);
+                    atrule.walkRules(createWalker(aro));
+                    break;
+                }
+                case 'namespace':
+                {
+                    const [prefix, ns] = postcss.list.space(params);
+                    const pns = unescape(ns);
+                    root.namespaces[pns ? prefix : pns] = pns;
+                    break;
+                }
+                case 'import':
+                {
+                    const [match, url, squote, quote, tparam] =importRe.exec(params);
+                    root.imports.push({url: url || squote || quote, params:tparam});
+                    break;
 
-            if (atrule.name === 'media') {
-                const aro = {css: {}, tags: {}, expressions: parseMedia(atrule.params)};
-                root.rules.push(aro);
-                atrule.walkRules(createWalker(aro));
-            } else if (atrule.name === 'namespace') {
-                const [prefix, ns] = postcss.list.space(atrule.params);
-                const pns = JSON.parse(ns);
-                root.namespaces[pns ? prefix : pns] = pns;
-            } else if (atrule.name === 'import') {
-                const [match, url, squote, quote, params] = importRe.exec(atrule.params);
-                root.imports.push({url: url || squote || quote, params});
+                }
+                case 'keyframes':
+                {
+                    const keyframes = root.keyframes || (root.keyframes = {});
+                    const aro = keyframes[params] || (keyframes[params] = {css:{}});
+                    atrule.walkRules((rule)=> {
+                        const selector = rule.selector.split(/\,\s*/);
+                        rule.walkDecls((decl)=> {
+                            const val = parse(decl.prop, decl.value, null, decl);
+                            for (const s of selector) {
+                                let n;
+                                switch (s) {
+                                    case 'from':
+                                        n = '0';
+                                        break;
+                                    case 'to':
+                                        n = '100';
+                                        break;
+                                    default:
+                                        n = s.replace(/%$/, '');
+                                }
+                                if (!aro.css[n]) aro.css[n] = [];
+                                aro.css[n].push(val);
+                            }
+                        })
+                    });
+                    break;
+                }
+                default:
+                    console.warn(`unimplemented atrule ${name} ${params}`);
             }
         });
 

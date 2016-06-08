@@ -176,17 +176,23 @@ describe('postcss-react-native', function () {
             return css;
         });
     });
-    it('should parse component', function () {
-        return test('component', (f, source)=> {
-            const ret = f({height: 1024, width: 768, scale: 1});
-            expect(ret).to.exist;
+    it('should parse component', function (done) {
+        return testTransform('component', (f, source)=> {
+            return f({height: 1024, width: 768, scale: 1}).then((ret, css, src)=> {
+                console.log(src);
+                expect(ret).to.exist;
+                done();
+            }, done);
         });
     });
 
-    it('should parse clazz-pseudo', function () {
-        return test('clazz-pseudo', (f, source)=> {
-            const ret = f({height: 1024, width: 768, scale: 1});
-            expect(ret).to.exist;
+    it('should parse clazz-pseudo', function (done) {
+        return testTransform('clazz-pseudo', (f, source)=> {
+            return f({height: 1024, width: 768, scale: 1}).then((ret, css, src)=> {
+                console.log(src);
+                expect(ret).to.exist;
+                done();
+            }, done);
         });
     });
     it('should parse real-import', function (done) {

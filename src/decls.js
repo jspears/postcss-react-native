@@ -1,5 +1,5 @@
 "use strict";
-import {border, transition, font} from './declarations';
+import {border, transition, font, animation} from './declarations';
 import words from './words';
 
 /**
@@ -53,7 +53,7 @@ function _box(postfix, values, table = TRBLV, rtable = RTRBLV) {
         return obj;
     }, {});
 }
-function box(postfix, values, prefix, table = TRBLV) {
+function box(postfix, values, prefix, tag, table = TRBLV) {
     return _box(postfix, words(values), table);
 }
 const color = postfixWrap.bind(null, 'color');
@@ -74,6 +74,7 @@ export const HANDLERS = {
     margin: box,
     padding: box,
     color: first,
+    animation,
     border,
     shadow: enumer('color', 'offset', 'opacity', 'radius'),
     position: enumer('absolute', 'relative'),
@@ -174,14 +175,15 @@ export const HANDLERS = {
 const VENDORS = ['mox', 'ie', 'ios', 'android', 'native', 'webkit', 'o', 'ms'];
 const declRe = new RegExp('^(?:-(' + (VENDORS.join('|')) + ')-)?(.+?)(?:-(.+?))?$');
 
-export function parse(decl, str) {
+export function parse(decl, str, tag) {
     const [match, vendor=false, type, postfix] = declRe.exec(decl);
     const handler = HANDLERS[type];
     if (!handler) {
         console.warn('unknown type', type, postfix);
         return;
     }
-    return {type, vendor, values: handler(postfix, str, vendor)}
+    const values = handler(postfix, str, vendor, tag);
+    return values == null ? null : {type, vendor, values};
 }
 
 export default ({parse});

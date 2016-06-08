@@ -1,16 +1,18 @@
 #!/usr/bin/env node
+require('babel-register');
 var path = require('path');
+
 var fs = require('fs');
 var rdir = path.join.bind(path, process.cwd());
 var postcss = require('postcss');
-var plugin = require('../dist/index');
+var plugin = require('../src/index');
 var args = process.argv.splice(2);
 var DEFAULT = {
     src: rdir('./src/styles'),
     dest: rdir('./dest/styles'),
     once: false
 };
-var source = require('../dist/source').default;
+var source = require('../src/source').default;
 var conf = Object.assign({}, DEFAULT);
 function compile(name, input, output) {
     var p = postcss(plugin({toJSON:source , toStyleSheet: output}))

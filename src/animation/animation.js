@@ -59,6 +59,22 @@ function Animation(anim) {
             ].join(' ');
         });
     };
+    this.toJSON = ()=> {
+        return name.reduce((ret, prop, i)=> {
+            //    duration | timing-function | delay | iteration-count | direction | fill-mode | play-state | name
+            const p = ret[prop] || (ret[prop] = {});
+
+            p.duration = pu.repeatAt(i, duration, Animation.defaultDuration);
+            p.timingFunction = pu.repeatAt(i, timingFunction, Animation.defaultTimingFunction);
+            p.delay = pu.repeatAt(i, delay, Animation.defaultDelay);
+            p.iterationCount = pu.repeatAt(i, iterationCount, Animation.defaultIterationCount);
+            p.direction = pu.repeatAt(i, direction, Animation.defaultDirection);
+            p.fillMode = pu.repeatAt(i, fillMode, Animation.defaultFillMode);
+            p.playState = pu.repeatAt(i, playState, Animation.defaultPlayState);
+
+            return ret;
+        }, {});
+    };
 
     this.timeout = function _timeout(filter) {
         var iter = filter ? name.filter(pu.filter(filter)) : delay.length > duration.length ? delay : duration;
@@ -173,4 +189,14 @@ Animation.defaultTimingFunction = 'ease';
 Animation.defaultDelay = 0;
 Animation.defaultDuration = 0;
 Animation.defaultIterationCount = 1;
+Animation.fromJSON = (json)=> {
+    return Object.keys(json).reduce((ret, key)=> {
+        const value = json[key];
+        ret.name(key);
+        Object.keys(value).reduce((r, k)=> {
+            ret[k](value[k]);
+        }, ret);
+        return ret;
+    }, new Animation());
+};
 module.exports = Animation;

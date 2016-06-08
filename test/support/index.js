@@ -40,9 +40,10 @@ export const makeRequire = (dimensions, Platform)=> {
     const mockModules = {
         'react-native': mockReactNative(dimensions, Platform),
         'react': MockReact,
-        'postcss-react-native/dist/listen': {default: listen},
-        'postcss-react-native/dist/features': {default: FEATURES},
-        'postcss-react-native/dist/flatten': {default: (...args)=>args[args.length - 1]},
+        'postcss-react-native/src/listen': {default: listen},
+        'postcss-react-native/src/features': {default: FEATURES},
+        'postcss-react-native/src/flatten': {default: (_, v)=>v},
+        'postcss-react-native/src/AnimatedCSS': {default: {}},
         'RCTDeviceEventEmitter': {
             addListener(){
             }
@@ -127,7 +128,7 @@ export const transform = (name, req, map = {})=> {
 };
 
 export const testString = function (input, opts) {
-    return postcss(plugin(opts)).process(input, process, {from: 'from', to: 'to'});
+    return postcss(plugin(opts)).process(input, {from: 'from', to: 'to'});
 };
 //use for debugging;
 export const toJSON = (obj, {source:{input:{file='rules'}}})=> {

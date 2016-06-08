@@ -1,27 +1,9 @@
 "use strict";
 import unit from './unit';
+import camel from './util/camel';
+import isObjectLike from './util/isObjectLike';
 
 const quote = JSON.stringify.bind(JSON);
-
-const uc = (v = '')=> {
-    return v ? v[0].toUpperCase() + v.substring(1) : v;
-};
-
-const ucc = (v)=> {
-    return v.split('-').map(uc).join('');
-};
-
-const camel = (arg, ...args)=> {
-    const [a, ...rest] = arg.split('-');
-    const r = [a];
-    if (rest.length) {
-        r.push(...rest.filter(v=>!v).map(ucc));
-    }
-    if (args.length) {
-        r.push(...args.map(ucc));
-    }
-    return r.join('');
-};
 
 const vendorIf = (vendor, str)=> {
     if (vendor) {
@@ -51,18 +33,6 @@ const rhs = (val)=> {
     }
 };
 
-const isObjectLike = (value)=> {
-    if (!value) return false;
-    const tofv = typeof value;
-    switch (tofv) {
-        case 'string':
-        case 'boolean':
-        case 'number':
-            return false;
-    }
-    if (value instanceof Date || value instanceof RegExp)return false;
-    return true;
-};
 
 const pdecl = (root, type, values) => {
     if (type === 'transition') {
@@ -95,18 +65,14 @@ const pdecl = (root, type, values) => {
     return dstr;
 };
 
-const writeDecls = (decls = [], base = '', start = '')=> {
-    return decls.reduce((str, decl)=> {
-        const declStr = vendorIf(decl.vendor, `${pdecl(base, decl.type, decl.values)}`);
-        return `\n${str}\n${declStr}`
-    }, start);
-};
-
 const writeCSS = (css, i) => {
     return Object.keys(css).map((key)=> {
         const base = `css[${JSON.stringify(key)}]`;
         const decls = css[key];
         return decls.reduce((str, decl)=> {
+            if (!decl) {
+                console.log('say what?', key, decls);
+            }
             const declStr = vendorIf(decl.vendor, `${pdecl(base, decl.type, decl.values)}`);
             return `\n${str}\n${declStr}`
         }, `if (!css) var css = {};\nif(!${base}) ${base} = {};\n`);
@@ -169,6 +135,9 @@ const px = 1,
       px : px,
       vh : vh,
       vw : vw,
+      '%':()=>{
+        return percentageW / 100;
+      },
       'in':inch, 
       pt:(inch/72), 
       em:1, 
@@ -178,12 +147,27 @@ const px = 1,
 ${rules.map(writeSheet).join('\n')}
 `;
 };
+export const writeKeyframes = (keyframes)=> {
+    if (!keyframes) return '';
 
-export const source = ({rules=[], imports, namespaces})=> {
+    return Object.keys(keyframes).reduce((ret, key)=> {
+        const rules = [keyframes[key]];
+        return `${ret}
+            publish.subscribe((c)=>{
+              const keyframe = function(config){ 
+                ${sheet(rules)}
+                 return css
+              }
+              keyframes[${JSON.stringify(key)}] = keyframe(c);
+            });
+        `;
+    }, 'var keyframes = {};');
+};
+export const source = (model)=> {
     return `
-     var listen = require('postcss-react-native/dist/listen').default;
-     var FEATURES = require('postcss-react-native/dist/features').default;
-     var flatten = require('postcss-react-native/dist/flatten').default;
+     var listen = require('postcss-react-native/src/listen').default;
+     var FEATURES = require('postcss-react-native/src/features').default;
+     var flatten = require('postcss-react-native/src/flatten').default;
      var RCTDeviceEventEmitter = require('RCTDeviceEventEmitter');
      const publish = listen();
      const unpublish = listen();
@@ -200,8 +184,12 @@ export const source = ({rules=[], imports, namespaces})=> {
             value: true
      });
      //imports
-     ${writeImports(imports)}
-     exports.unsubscribe = unpublish.subscribe(publish.property(exports, 'StyleSheet', ${calculate(rules)}));
+     ${writeImports(model.imports)}
+     
+     //keyframes
+     ${writeKeyframes(model.keyframes)};
+     
+     exports.unsubscribe = unpublish.subscribe(publish.property(exports, 'StyleSheet', ${calculate(model.rules)}));
 
      exports.onChange = publish;
      
@@ -230,10 +218,10 @@ export const source = ({rules=[], imports, namespaces})=> {
  
      
      //namespace require
-     ${namespaceToRequire(namespaces)}
+     ${namespaceToRequire(model.namespaces)}
      
      //tagsToType
-     ${tagsToTypes(rules)}
+     ${tagsToTypes(model)}
 
      //publish current config;
      publish(makeConfig());
@@ -305,7 +293,7 @@ export const buildAnimationSrc = (transition)=> {
  * we need to collapse them. This little dusy does that.
  * @param rules
  */
-export const tagsToTypes = (rules = [])=> {
+export const tagsToTypes = ({rules = [], keyframes})=> {
 
     return tagsToType(rules.reduce((ret, {tags, expressions})=> {
         if (tags) {
@@ -315,11 +303,12 @@ export const tagsToTypes = (rules = [])=> {
             }, ret);
         }
         return ret;
-    }, {}));
+    }, {}), keyframes);
 
 };
 
-export const tagsToType = (tags)=> {
+
+export const tagsToType = (tags, keyframes)=> {
     if (!tags) return '';
     const keys = Object.keys(tags);
     if (keys.length === 0) {
@@ -330,6 +319,7 @@ export const tagsToType = (tags)=> {
         const stringKey = quote(key);
         let namespace = '';
         let pseudos = {};
+        let animations = null;
         const valArray = tags[key].reduce((ret, {tag, css, expressions}) => {
             if (tag.namespace) {
                 namespace = tag.namespace;
@@ -341,17 +331,27 @@ export const tagsToType = (tags)=> {
                 }));
 
             }
+
+
             if (tag.decls) {
                 ret.push({css: {__current: tag.decls}, expressions: expressions});
             } else {
                 ret.push({css, expressions});
 
             }
-
+            if (tag.animation) {
+                if (!animations) {
+                    animations = [];
+                }
+                animations.push(tag.animation.toJSON());
+            }
             return ret;
         }, []);
+        const renderStr = animations ? `React.createElement(AnimatedCSS, props, children)` : `React.createElement(pkgs.${namespace}, props, children)`;
+
         return `
 (function(e){
+            
        var _style = ${calculate(valArray)};
        var _sstyle;
        //keep style in sync with
@@ -360,12 +360,16 @@ export const tagsToType = (tags)=> {
        });
         
        function handleClass(start, className){
-          return (className || '').split(/\s+?/).reduce(function(ret, name){
+          return (className || '').split(/\\s+?/).reduce(function(ret, name){
              if (e.StyleSheet && e.StyleSheet[name]) ret.push(e.StyleSheet[name]);
              if (_sstyle[name]) ret.push(_sstyle[name]);
              return ret;
            },start);
        }
+        //animations?
+       ${animations ? '//import animation\n var AnimatedCSS = require("postcss-react-native/src/AnimatedCSS").default;' : ''} 
+       ${animations ? 'var _animations = ' + JSON.stringify(animations) : ''}
+
        e[${stringKey}] = React.createClass({
        displayName: ${stringKey},
        componentWillMount(){
@@ -387,10 +391,13 @@ export const tagsToType = (tags)=> {
             
             var children = this.props.children;   
             var props = Object.assign({}, this.props);
+            
             delete props.children;
             props.style = handleClass( [_sstyle.__current], this.props.className);
+            ${animations ? 'props.animate=_animations;\nprops.keyframes=keyframes;' : ''}
             ${Object.keys(pseudos).map((v=>PSEUDO[v] && PSEUDO[v].prop() ? PSEUDO[v].prop(pseudos[v]) : '')).join(';\n')}
-            return React.createElement(pkgs.${namespace}, props, children);  
+            
+            return ${renderStr};  
        }
     
     });
