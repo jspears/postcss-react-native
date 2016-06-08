@@ -28,7 +28,8 @@
     "parse-css-font": "^2.0.2",
     "postcss": "^5.0.4",
     "postcss-selector-parser": "^2.0.0",
-    "postcss-value-parser": "^3.3.0"
+    "postcss-value-parser": "^3.3.0",
+    "react-native-animatable": "^0.6.1"
   },
   "devDependencies": {
     "babel": "^6.5.2",

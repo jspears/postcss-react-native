@@ -16,7 +16,11 @@ const rhsunit = (u)=> {
     const un = unit(u);
     let ret;
     if (un && typeof un.value === 'number') {
-        ret = un.unit ? `(${un.value} * units["${un.unit}"])` : un.value;
+        if (un.unit == 'deg') {
+            ret = `'${un.value} deg'`
+        } else {
+            ret = un.unit ? `(${un.value} * units["${un.unit}"])` : un.value;
+        }
     } else {
         ret = quote(u);
     }
@@ -33,6 +37,16 @@ const rhs = (val)=> {
     }
 };
 
+const writeNakedObj = (obj, unit = rhs)=> {
+    return `{${Object.keys(obj).map(v=>`${quote(v)}:${unit(obj[v])}`).join(',\n')}}`;
+};
+const writeArray = (root, type, values)=> {
+    const rt = `${root}.${type}`;
+    return `
+       if (!${rt}) ${rt} = [];
+       ${values.map((v)=>`${rt}.push(${writeNakedObj(v)})`).join(';\n')}
+  `
+};
 
 const pdecl = (root, type, values) => {
     if (type === 'transition') {
@@ -41,6 +55,9 @@ const pdecl = (root, type, values) => {
     if (!isObjectLike(values)) {
         const vvv = rhs(values);
         return `${root}.${camel(type)} = ${vvv};`;
+    }
+    if (type === 'transform' && Array.isArray(values)) {
+        return writeArray(root, type, values);
     }
     const dstr = Object.keys(values).reduce((str, key)=> {
         const v = values[key];
@@ -135,9 +152,7 @@ const px = 1,
       px : px,
       vh : vh,
       vw : vw,
-      '%':()=>{
-        return percentageW / 100;
-      },
+      '%':!percentageW ? 0 : percentageW / 100,
       'in':inch, 
       pt:(inch/72), 
       em:1, 
@@ -317,7 +332,7 @@ export const tagsToType = (tags, keyframes)=> {
 
     return keys.map((key)=> {
         const stringKey = quote(key);
-        let namespace = '';
+        let namespace = '';g
         let pseudos = {};
         let animations = null;
         const valArray = tags[key].reduce((ret, {tag, css, expressions}) => {

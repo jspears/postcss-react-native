@@ -1,5 +1,5 @@
 "use strict";
-import {border, transition, font, animation} from './declarations';
+import DECLS from './declarations';
 import words from './words';
 import parseColor from 'parse-color';
 /**
@@ -24,7 +24,7 @@ const TRBLV = Object.assign({}, TRBL, {
 });
 
 const postfixWrap = (postfix, value)=> {
-    return {[postfix]: value};
+    return postfix ? {[postfix]: value} : value;
 };
 
 function _box(postfix, values, table = TRBLV, rtable = RTRBLV) {
@@ -57,7 +57,7 @@ function box(postfix, values, prefix, tag, table = TRBLV) {
     return _box(postfix, words(values), table);
 }
 const color = (postfix, value)=> {
-    const c = `rgba(${parseColor(value)['rgba'].join(',')})`;
+    const c = `rgba(${parseColor(value)['rgba'].join(', ')})`;
     return postfix ? {[postfix]: c} : c;
 };
 
@@ -68,7 +68,7 @@ const enumer = (...enums)=>postfixWrap;
 const first = (postfix, value)=> {
     return value;
 };
-export const HANDLERS = {
+export const HANDLERS = Object.assign({}, DECLS, {
     width: unit,
     height: unit,
     top: unit,
@@ -78,8 +78,6 @@ export const HANDLERS = {
     margin: box,
     padding: box,
     color,
-    animation,
-    border,
     shadow: enumer('color', 'offset', 'opacity', 'radius'),
     position: enumer('absolute', 'relative'),
     flex(postfix, value){
@@ -138,24 +136,15 @@ export const HANDLERS = {
                 return color(value);
         }
     },
-    transform(postfix, value){
-        switch (postfix) {
-            case 'matrix':
-                return postfixWrap(postfix, value);
 
-        }
-        return value;
-    },
     overflow: enumer('visible', 'hidden'),
     backface: enumer('visiblility'),
     background(postfix, value){
         switch (postfix) {
             case 'color':
-                return {[postfix]: value};
+                return color(postfix, value);
         }
     },
-    font,
-    transition,
     text(postfix, value){
         switch (postfix) {
             case 'shadow-offset':
@@ -175,7 +164,7 @@ export const HANDLERS = {
                 return postfixWrap(postfix, value);
         }
     }
-};
+});
 const VENDORS = ['mox', 'ie', 'ios', 'android', 'native', 'webkit', 'o', 'ms'];
 const declRe = new RegExp('^(?:-(' + (VENDORS.join('|')) + ')-)?(.+?)(?:-(.+?))?$');
 
