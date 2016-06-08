@@ -8,22 +8,22 @@ Currently a proof of concept.  It roughly based on  [react-native-css](https://g
 although it shares no code.
 
 ##Capablities
- *[x] Recalculate stylesheet based on media queries and current dimensions.
- *[x] -ios,-android vendor prefixes.
- *[x] Supports px, vh, vw,in, pt,em,pc,vmin,vax units.
- *[x] handles border shorthand.
- *[x] handles margin shorthand.
- *[x] supports checked pseudo selector.
- *[x] handles most font properties.
- *[x] Transitions - (In progress)
- *[x] Imports
- *[ ] Implement content, before and after pseudo's.
- *[ ] Nested selectors (partial support)
- *[ ] Percentage units.
- *[ ] Nice import from. I.E import from styles rather than dist.
- *[ ] filter properties not supported by react-native.  Tricky, because it is component dependent.
- *[ ] Support regular react (currently only react-native).
- *[ ] Support background images.
+ - [x] Recalculate stylesheet based on media queries and current dimensions.
+ - [x] -ios,-android vendor prefixes.
+ - [x] Supports px, vh, vw,in, pt,em,pc,vmin,vax units.
+ - [x] handles border shorthand.
+ - [x] handles margin shorthand.
+ - [x] supports checked pseudo selector.
+ - [x] handles most font properties.
+ - [x] Transitions - (In progress)
+ - [x] Imports
+ - [ ] Implement content, before and after pseudo's.
+ - [ ] Nested selectors (partial support)
+ - [ ] Percentage units.
+ - [ ] Nice import from. I.E import from styles rather than dist.
+ - [ ] filter properties not supported by react-native.  Tricky, because it is component dependent.
+ - [ ] Support regular react (currently only react-native).
+ - [ ] Support background images.
 
 ## Usage
 
