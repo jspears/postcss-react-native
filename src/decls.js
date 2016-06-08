@@ -1,7 +1,7 @@
 "use strict";
 import {border, transition, font, animation} from './declarations';
 import words from './words';
-
+import parseColor from 'parse-color';
 /**
  *
  * 1->1 1 1 1
@@ -56,8 +56,12 @@ function _box(postfix, values, table = TRBLV, rtable = RTRBLV) {
 function box(postfix, values, prefix, tag, table = TRBLV) {
     return _box(postfix, words(values), table);
 }
-const color = postfixWrap.bind(null, 'color');
+const color = (postfix, value)=> {
+    const c = `rgba(${parseColor(value)['rgba'].join(',')})`;
+    return postfix ? {[postfix]: c} : c;
+};
 
+//const color = postfixWrap.bind(null, 'color');
 
 const unit = (postfix, value)=>value;
 const enumer = (...enums)=>postfixWrap;
@@ -73,7 +77,7 @@ export const HANDLERS = {
     bottom: unit,
     margin: box,
     padding: box,
-    color: first,
+    color,
     animation,
     border,
     shadow: enumer('color', 'offset', 'opacity', 'radius'),

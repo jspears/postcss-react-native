@@ -24,10 +24,11 @@
   "dependencies": {
     "css-border-property": "^1.1.0",
     "css-mediaquery": "^0.1.2",
+    "parse-color": "^1.0.0",
     "parse-css-font": "^2.0.2",
+    "postcss": "^5.0.4",
     "postcss-selector-parser": "^2.0.0",
-    "postcss-value-parser": "^3.3.0",
-    "postcss": "^5.0.4"
+    "postcss-value-parser": "^3.3.0"
   },
   "devDependencies": {
     "babel": "^6.5.2",
