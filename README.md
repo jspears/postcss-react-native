@@ -39,7 +39,7 @@ you can use the prn watcher.
 
 ```sh
  $ npm install postcss-react-native
- $ ./node_modules/.bin/prn -d styles -w ./path/to/css
+ $ ./node_modules/.bin/prn -d dist -w ./style
 
 ```
 
