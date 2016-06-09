@@ -164,28 +164,8 @@ function getStyleValues(keys, style) {
     return values;
 }
 const asc = (a, b)=>a - b;
-
-const makeInteropolate = (animationValue, keyframe)=> {
-    const itop = Object.keys(keyframe).sort(asc).reduce((ret, keyframeKey, i)=> {
-
-        const frame = keyframe[keyframeKey];
-        const v = keyframeKey - 0;
-
-        const range = v === 0 ? 0 : v / 100;
-
-        Object.keys(frame).map(fk=> {
-            if (fk in frame) {
-                const c = ret[fk] || (ret[fk] = { inputRange: [], outputRange: []});
-                c.inputRange.push(range);
-                c.outputRange.push(frame[fk]);
-            }
-        });
-        return ret;
-    }, {});
-    return Object.keys(itop).reduce((ret, key)=> {
-        ret[key] = animationValue.interpolate(itop[key]);
-        return ret;
-    }, {});
+const rangeCheck = ({inputRange, outputRange})=> {
+    return (inputRange && outputRange && inputRange.length > 1 && outputRange.length > 1)
 };
 // Make (almost) any component animatable, similar to Animated.createAnimatedComponent
 export function createAnimatableComponent(component) {
@@ -334,10 +314,65 @@ export function createAnimatableComponent(component) {
             }
         }
 
+        makeInteropolate(animationValue, keyframe) {
+            const itop = Object.keys(keyframe).sort(asc).reduce((ret, keyframeKey, i)=> {
+
+                const frame = keyframe[keyframeKey];
+                const v = keyframeKey - 0;
+
+                const range = v === 0 ? 0 : v / 100;
+
+                Object.keys(frame).map(fk=> {
+                    if (fk in frame) {
+                        /**
+                         *  transform: [{
+     translateY: this.state.fadeAnim.interpolate({
+       inputRange: [0, 1],
+       outputRange: [150, 0]  // 0 : 150, 0.5 : 75, 1 : 0
+     }),
+   }],
+                         */
+                        if (fk === 'transform') {
+                            const c = ret[fk] || (ret[fk] = {});
+                            for (const transform of frame[fk]) {
+                                for (const transformKey of Object.keys(transform)) {
+                                    const tc = c[transformKey] || (c[transformKey] = {
+                                            inputRange: [],
+                                            outputRange: []
+                                        } );
+                                    tc.inputRange.push(range);
+                                    tc.outputRange.push(transform[transformKey]);
+                                }
+                            }
+                        } else {
+                            const c = ret[fk] || (ret[fk] = {inputRange: [], outputRange: []});
+                            c.inputRange.push(range);
+                            c.outputRange.push(frame[fk]);
+                        }
+                    }
+                });
+                return ret;
+            }, {});
+            return Object.keys(itop).reduce((ret, key)=> {
+                const itk = itop[key];
+                if (key === 'transform') {
+                    Object.keys(itk).forEach((transformKey)=> {
+                        if (rangeCheck(itk[transformKey])) {
+                           const tr = ret[key] || (ret[key] = []);
+                           tr.push({[transformKey]: animationValue.interpolate(itk[transformKey])})
+                        }
+                    });
+                } else if (rangeCheck(itk)) {
+                    ret[key] = animationValue.interpolate(itk);
+                }
+                return ret;
+            }, {});
+        }
+
         createAnimate(conf) {
             const {keyframes} = this.props;
             return ()=> {
-                return this.animate(conf, makeInteropolate(this.state.animationValue, keyframes[conf.name]));
+                return this.animate(conf, this.makeInteropolate(this.state.animationValue, keyframes[conf.name]));
             }
         }
 
@@ -387,7 +422,7 @@ export function createAnimatableComponent(component) {
                 duration,
             }).start(endState => {
                 currentIteration++;
-                if (endState.finished &&! this.props.transition && (iterationCount === 'infinite' || currentIteration < iterationCount)) {
+                if (endState.finished && !this.props.transition && (iterationCount === 'infinite' || currentIteration < iterationCount)) {
                     this._startAnimation(conf, currentIteration, callback);
                 } else if (callback) {
                     callback(endState);
