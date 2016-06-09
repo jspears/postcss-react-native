@@ -12,7 +12,7 @@ describe('color', function(){
     it('should parse color decl', ()=>{
       return testString('.c { color:#fff }', {
            toJSON(o){
-               expect(o.rules[0].css['c'][0].values).to.eql('rgba(255,255,255,1)');
+               expect(o.rules[0].css['c'][0].values).to.eql('rgba(255, 255, 255, 1)');
            }
        })
     });

@@ -332,7 +332,7 @@ export const tagsToType = (tags, keyframes)=> {
 
     return keys.map((key)=> {
         const stringKey = quote(key);
-        let namespace = '';g
+        let namespace = '';
         let pseudos = {};
         let animations = null;
         const valArray = tags[key].reduce((ret, {tag, css, expressions}) => {
@@ -358,7 +358,7 @@ export const tagsToType = (tags, keyframes)=> {
                 if (!animations) {
                     animations = [];
                 }
-                animations.push(tag.animation.toJSON());
+                animations.push(...tag.animation.toJSON());
             }
             return ret;
         }, []);
@@ -382,8 +382,9 @@ export const tagsToType = (tags, keyframes)=> {
            },start);
        }
         //animations?
-       ${animations ? '//import animation\n var AnimatedCSS = require("postcss-react-native/src/AnimatedCSS").default;' : ''} 
+       ${animations ? '//import animation\n var createAnimatableComponent = require("postcss-react-native/src/AnimatedCSS").createAnimatableComponent;' : ''} 
        ${animations ? 'var _animations = ' + JSON.stringify(animations) : ''}
+       ${animations ? `var AnimatedCSS = createAnimatableComponent(pkgs.${namespace});\n` : ''} 
 
        e[${stringKey}] = React.createClass({
        displayName: ${stringKey},

@@ -101,14 +101,14 @@ module.exports = postcss.plugin('postcss-react-native', function (opts) {
                 case 'import':
                 {
                     const [match, url, squote, quote, tparam] =importRe.exec(params);
-                    root.imports.push({url: url || squote || quote, params:tparam});
+                    root.imports.push({url: url || squote || quote, params: tparam});
                     break;
 
                 }
                 case 'keyframes':
                 {
                     const keyframes = root.keyframes || (root.keyframes = {});
-                    const aro = keyframes[params] || (keyframes[params] = {css:{}});
+                    const aro = keyframes[params] || (keyframes[params] = {css: {}});
                     atrule.walkRules((rule)=> {
                         const selector = rule.selector.split(/\,\s*/);
                         rule.walkDecls((decl)=> {

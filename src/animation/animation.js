@@ -60,10 +60,8 @@ function Animation(anim) {
         });
     };
     this.toJSON = ()=> {
-        return name.reduce((ret, prop, i)=> {
-            //    duration | timing-function | delay | iteration-count | direction | fill-mode | play-state | name
-            const p = ret[prop] || (ret[prop] = {});
-
+        return name.map((prop, i)=> {
+            const p = {};
             p.duration = pu.repeatAt(i, duration, Animation.defaultDuration);
             p.timingFunction = pu.repeatAt(i, timingFunction, Animation.defaultTimingFunction);
             p.delay = pu.repeatAt(i, delay, Animation.defaultDelay);
@@ -71,9 +69,9 @@ function Animation(anim) {
             p.direction = pu.repeatAt(i, direction, Animation.defaultDirection);
             p.fillMode = pu.repeatAt(i, fillMode, Animation.defaultFillMode);
             p.playState = pu.repeatAt(i, playState, Animation.defaultPlayState);
-
-            return ret;
-        }, {});
+            p.name = prop;
+            return p;
+        });
     };
 
     this.timeout = function _timeout(filter) {
@@ -173,7 +171,7 @@ function Animation(anim) {
     this['animation-duration'] = this.duration = defReplace(duration, pu.toMillis)
     this['animation-timing-function'] = this.timingFunction = defReplace(timingFunction);
     this['animation-delay'] = this.delay = defReplace(delay, pu.toMillis);
-    this['animation-direction'] = this.direction = defReplace(direction, pu.toMillis);
+    this['animation-direction'] = this.direction = defReplace(direction);
     this['animation-iteration-count'] = this.iterationCount = defReplace(iterationCount, toIntOrInfinite);
     this['animation-fill-mode'] = this.fillMode = defReplace(fillMode);
     this['animation-play-state'] = this.playState = defReplace(playState);
