@@ -7,7 +7,7 @@ const quote = JSON.stringify.bind(JSON);
 
 const vendorIf = (vendor, str)=> {
     if (vendor) {
-        return `if (vendor === ${JSON.stringify(vendor)}){\n${str}\n}`;
+        return `if (vendor === 'native' || vendor === ${JSON.stringify(vendor)}){\n${str}\n}`;
     }
     return str;
 };
@@ -49,9 +49,6 @@ const writeArray = (root, type, values)=> {
 };
 
 const pdecl = (root, type, values) => {
-    if (type === 'transition') {
-        return `if (!transition) var transition = []; transition.push.apply(transition, ${JSON.stringify(values)});`;
-    }
     if (!isObjectLike(values)) {
         const vvv = rhs(values);
         return `${root}.${camel(type)} = ${vvv};`;
@@ -82,18 +79,31 @@ const pdecl = (root, type, values) => {
     return dstr;
 };
 
-const writeCSS = (css, i) => {
-    return Object.keys(css).map((key)=> {
-        const base = `css[${JSON.stringify(key)}]`;
+const writeRule = ({css, expressions = []}) => {
+
+    const src = Object.keys(css).map((key)=> {
+
         const decls = css[key];
-        return decls.reduce((str, decl)=> {
-            if (!decl) {
-                console.log('say what?', key, decls);
-            }
-            const declStr = vendorIf(decl.vendor, `${pdecl(base, decl.type, decl.values)}`);
-            return `\n${str}\n${declStr}`
-        }, `if (!css) var css = {};\nif(!${base}) ${base} = {};\n`);
-    }).filter(v=>!/^\s*$/.test(v)).join(';\n')
+        const qkey = JSON.stringify(key);
+        const bases = {};
+        const strDecls = decls.map((decl)=> {
+            const type = decl.prefix || (decl.type == 'animation' || decl.type == 'transition') ? decl.type : 'style';
+            const cbase = `current.__${type}`;
+            bases[cbase] = true;
+            return vendorIf(decl.vendor, `${pdecl(cbase, decl.type, decl.values)}`);
+        }).join('\n');
+
+        return `
+        internals[${qkey}] = function (parent, config){
+          const current = parent &&  parent(config) || {};
+          ${Object.keys(bases).map(base=>`if (!${base}) ${base}={}`).join(';\n')};
+          ${writeVars()}
+          ${writeSheet(strDecls, expressions)}
+           return current;
+            }.bind(null, internals[${qkey}])`
+    }).filter(v=>!/^\s*$/.test(v)).join(';\n');
+
+    return src;
 };
 
 
@@ -107,31 +117,81 @@ const writeExpressions = ({expressions, inverse})=> {
     return inverse ? `!(${expr})` : expr;
 };
 
-const writeSheet = ({css, expressions = []}, idx) => {
-    let str = '';
+const writeSheet = (cssStr, expressions = []) => {
     if (expressions.length) {
-        //expression check
-        str += `if (${expressions.map(writeExpressions).join(' || ')}){\n${writeCSS(css, idx)}\n}`;
+        return `
+          if (${expressions.map(writeExpressions).join(' || ')}){\n${cssStr}\n}
+          `;
     } else {
-        str += writeCSS(css, idx);
+        return `
+          ${cssStr}
+          `;
     }
-    return str;
 };
 
+export const writeVars = ()=> {
+    return `const px = 1,
+        vendor = config.vendor,
+        inch = 96,
+        vh = config.height / 100,
+        vw = config.width / 100,
+        percentageW = config.clientWidth || config.width,
+        percentageH = config.clientHeight|| 0,
+        units = {
+            px : px,
+            vh : vh,
+            vw : vw,
+            '%':!percentageW ? 0 : percentageW / 100,
+            'in':inch,
+            pt:(inch/72),
+            em:1,
+            pc:12 * (inch/72),
+            vmin:Math.min(vw, vh),
+            vmax: Math.max(vw, vh)
+        };`;
+};
+
+export const writeKeyframes = (keyframes)=> {
+    if (!keyframes) return 'var keyframes = {};';
+
+    return Object.keys(keyframes).reduce((ret, key)=> {
+        const rules = [keyframes[key]];
+        return `${ret}
+              keyframes[${JSON.stringify(key)}] = function(){
+               const internals = {};
+              ${join(rules, writeRule)}
+                 return internals
+              }
+           ;
+           
+        `;
+    }, 'var keyframes = {};');
+};
+
+const join = (array, fn, char = '\n')=> {
+    return array ? array.map(fn).join(char) : '';
+};
+
+
 export const writeImports = (imports = []) => {
+    const setup = `
+    const IMPORTS = [];
+    let importedInternals = {};
+    `;
     if (!imports || imports.length == 0) {
-        return 'var IMPORTS = []';
+        return setup;
     }
     let str = imports.reduce((ret, {url})=> {
         return `
          ${ret}importCss(require(${quote(url)}));\n`;
     }, '');
     return `
-          var IMPORTS = [];
+          ${setup}
           function importCss(imp){
               IMPORTS.push(imp.default);
+              importedInternals = imp.internals(importedInternals);
               Object.keys(imp).map((key)=>{
-                 if (key === 'default' || key == 'onChange' || key === 'DimensionComponent' || key == 'unpublish')
+                 if (key === 'default' || key == 'onChange' || key == 'internal' || key === 'DimensionComponent' || key == 'unpublish')
                    return;
                  exports[key] = imp[key]; 
               });
@@ -139,51 +199,14 @@ export const writeImports = (imports = []) => {
           ${str}          
 `;
 };
-export const sheet = (rules = [])=> {
-    return `
-const px = 1, 
-      vendor = config.vendor,
-      inch = 96,
-      vh = config.height / 100,
-      vw = config.width / 100, 
-      percentageW = config.componentWidth || config.width,
-      percentageH = config.componentHeight || 0,
-      units = {
-      px : px,
-      vh : vh,
-      vw : vw,
-      '%':!percentageW ? 0 : percentageW / 100,
-      'in':inch, 
-      pt:(inch/72), 
-      em:1, 
-      pc:12 * (inch/72),
-      vmin:Math.min(vw, vh),
-      vmax: Math.max(vw, vh) };
-${rules.map(writeSheet).join('\n')}
-`;
-};
-export const writeKeyframes = (keyframes)=> {
-    if (!keyframes) return '';
-
-    return Object.keys(keyframes).reduce((ret, key)=> {
-        const rules = [keyframes[key]];
-        return `${ret}
-            publish.subscribe((c)=>{
-              const keyframe = function(config){ 
-                ${sheet(rules)}
-                 return css
-              }
-              keyframes[${JSON.stringify(key)}] = keyframe(c);
-            });
-        `;
-    }, 'var keyframes = {};');
-};
 export const source = (model)=> {
     return `
+     "use strict";
      var listen = require('postcss-react-native/src/listen').default;
      var FEATURES = require('postcss-react-native/src/features').default;
      var flatten = require('postcss-react-native/src/flatten').default;
      var RCTDeviceEventEmitter = require('RCTDeviceEventEmitter');
+     
      const publish = listen();
      const unpublish = listen();
      function makeConfig(){
@@ -198,13 +221,33 @@ export const source = (model)=> {
      Object.defineProperty(exports, "__esModule", {
             value: true
      });
+
      //imports
      ${writeImports(model.imports)}
+    
+     //internals
+     exports.internals = function(_internals){
+        const internals = _internals || {};
+        //rules
+        ${join(model.rules, writeRule)}
+        
+        return internals;
+     
+     };
+
+     
      
      //keyframes
      ${writeKeyframes(model.keyframes)};
-     
-     exports.unsubscribe = unpublish.subscribe(publish.property(exports, 'StyleSheet', ${calculate(model.rules)}));
+    
+     exports.unsubscribe = unpublish.subscribe(publish.property(exports, 'StyleSheet', 
+       (config)=>{
+         const internals = exports.internals(importedInternals);
+         return StyleSheet.create(Object.keys(internals).reduce((ret,internal)=>{
+           ret[internal] = internals[internal](config).__style;
+           return ret;
+         }, {}));
+     }));
 
      exports.onChange = publish;
      
@@ -214,23 +257,7 @@ export const source = (model)=> {
      var StyleSheet = ReactNative.StyleSheet;
      var Platform = ReactNative.Platform;
      var React = require('react');
-     exports.DimensionComponent = React.createClass({
-        componentWillMount:function() {
-            var self = this;
-            this._listen = publish.subscribe(function(){
-              self.forceUpdate()
-            });
-        },
-        componentWillUnmount:function() {
-            this._listen && this._listen();
-        },
-        render(){
-          throw new Error("Should implement render");
-        }
-     });
-     
-     //
- 
+  
      
      //namespace require
      ${namespaceToRequire(model.namespaces)}
@@ -269,14 +296,6 @@ export const PSEUDO = {
     ':after': {}
 };
 
-export const calculate = (rules)=> {
-    return `function(config){
-         if (!css) var css = {};
-         ${sheet(rules)}
-         
-        return StyleSheet.create(flatten(IMPORTS, css));
-    }`
-};
 
 export const namespaceToRequire = (namespaces)=> {
     if (!namespaces) return '';
@@ -308,116 +327,45 @@ export const buildAnimationSrc = (transition)=> {
  * we need to collapse them. This little dusy does that.
  * @param rules
  */
-export const tagsToTypes = ({rules = [], keyframes})=> {
+export const tagsToTypes = ({rules = []})=> {
 
-    return tagsToType(rules.reduce((ret, {tags, expressions})=> {
-        if (tags) {
-            return Object.keys(tags).reduce((r, key)=> {
-                (r[key] || (r[key] = [])).push({tag: tags[key], expressions});
-                return r;
-            }, ret);
-        }
-        return ret;
-    }, {}), keyframes);
+    const ret = {};
+
+    rules.forEach(({tags, expressions})=>{
+        Object.keys(tags).forEach((tagKey)=>{
+            const rtag = ret[tagKey] || (ret[tagKey] = []);
+            const css = tags[tagKey];
+            rtag.push({css, expressions})
+        });
+    });
+
+    const str = tagsToType(ret);
+    return str;
+
+
 
 };
 
 
-export const tagsToType = (tags, keyframes)=> {
-    if (!tags) return '';
-    const keys = Object.keys(tags);
+export const tagsToType = (conf)=> {
+    if (!conf) return '';
+    const keys = Object.keys(conf);
     if (keys.length === 0) {
         return '';
     }
 
     return keys.map((key)=> {
-        const stringKey = quote(key);
-        let namespace = '';
-        let pseudos = {};
-        let animations = null;
-        const valArray = tags[key].reduce((ret, {tag, css, expressions}) => {
-            if (tag.namespace) {
-                namespace = tag.namespace;
-            }
-            if (tag.pseudo) {
-                ret.push(... Object.keys(tag.pseudo).map((pk)=> {
-                    (pseudos[pk] || (pseudos[pk] = [])).push(tag.pseudo);
-                    return {css: {[ `__current${pk}` ]: tag.pseudo[pk]}, expressions: tag.expressions}
-                }));
-
-            }
-
-
-            if (tag.decls) {
-                ret.push({css: {__current: tag.decls}, expressions: expressions});
-            } else {
-                ret.push({css, expressions});
-
-            }
-            if (tag.animation) {
-                if (!animations) {
-                    animations = [];
-                }
-                animations.push(...tag.animation.toJSON());
-            }
-            return ret;
-        }, []);
-        const renderStr = animations ? `React.createElement(AnimatedCSS, props, children)` : `React.createElement(pkgs.${namespace}, props, children)`;
-
+        const [namespace, name] = key.split('|', 2);
+        const stringKey = quote(name);
         return `
-(function(e){
-            
-       var _style = ${calculate(valArray)};
-       var _sstyle;
-       //keep style in sync with
-       publish.subscribe( config =>{
-            _sstyle = _style(config);    
-       });
-        
-       function handleClass(start, className){
-          return (className || '').split(/\\s+?/).reduce(function(ret, name){
-             if (e.StyleSheet && e.StyleSheet[name]) ret.push(e.StyleSheet[name]);
-             if (_sstyle[name]) ret.push(_sstyle[name]);
-             return ret;
-           },start);
-       }
-        //animations?
-       ${animations ? '//import animation\n var createAnimatableComponent = require("postcss-react-native/src/AnimatedCSS").createAnimatableComponent;' : ''} 
-       ${animations ? 'var _animations = ' + JSON.stringify(animations) : ''}
-       ${animations ? `var AnimatedCSS = createAnimatableComponent(pkgs.${namespace});\n` : ''} 
-
-       e[${stringKey}] = React.createClass({
-       displayName: ${stringKey},
-       componentWillMount(){
-          //forceUpdate when orientation changes.
-          var forceUpdate = this.forceUpdate.bind(this);
-          this._unlisten = publish.subscribe(function(){ 
-             forceUpdate()
-          });
-       },
-       componentWillUnmount(){
-          //stop forceUpdate when unmounting.
-          this._unlisten && this._unlisten();
-       },
-       onLayout(e){
-         console.log('layout', e);
-       },
-       ${Object.keys(pseudos).map((v=>PSEUDO[v] && PSEUDO[v].handler ? PSEUDO[v].handler(pseudos[v]) : '' )).concat(null).join(',\n')}
-       render(){
-            
-            var children = this.props.children;   
-            var props = Object.assign({}, this.props);
-            
-            delete props.children;
-            props.style = handleClass( [_sstyle.__current], this.props.className);
-            ${animations ? 'props.animate=_animations;\nprops.keyframes=keyframes;' : ''}
-            ${Object.keys(pseudos).map((v=>PSEUDO[v] && PSEUDO[v].prop() ? PSEUDO[v].prop(pseudos[v]) : '')).join(';\n')}
-            
-            return ${renderStr};  
-       }
-    
-    });
-})(exports);
+exports[${stringKey}] = (function(){
+     const styler = ()=>{
+            const internals = exports.internals();
+            ${join(conf[key], writeRule)}     
+            return internals;
+     }           
+     return require('postcss-react-native/src/DimensionComponent').default(pkgs.${namespace}, styler, keyframes, ${stringKey}); 
+    })();
 `
     }).join(';\n')
 };

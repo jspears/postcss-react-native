@@ -23,7 +23,9 @@ export const mockReactNative = (dimensions = {height: 500, width: 500, scale: 1}
         },
         Platform: {
             OS
-        }
+        },
+        View: 'View',
+        Text: 'Text'
     }
 };
 export const MockReact = {
@@ -35,6 +37,9 @@ export const MockReact = {
     }
 };
 
+const log = (src)=> {
+    console.log('\n\n---source--\n\n', src, '\n\n--- end of source---\n');
+};
 
 export const makeRequire = (dimensions, Platform)=> {
     const mockModules = {
@@ -44,6 +49,7 @@ export const makeRequire = (dimensions, Platform)=> {
         'postcss-react-native/src/features': {default: FEATURES},
         'postcss-react-native/src/flatten': {default: (_, v)=>v},
         'postcss-react-native/src/AnimatedCSS': {default: {}},
+        'postcss-react-native/src/DimensionComponent': {default: (...args)=>args},
         'RCTDeviceEventEmitter': {
             addListener(){
             }
@@ -60,6 +66,8 @@ export const makeRequire = (dimensions, Platform)=> {
 
 function compile(sources, require) {
     const src = source(sources);
+    log(src)
+
     try {
         const f = new Function(['require', 'exports'], src);
 
@@ -67,15 +75,18 @@ function compile(sources, require) {
             const exports = {};
             try {
                 f(require, exports);
-            } catch (e) {
-                console.log('function', src, '\n\n', e.stack + '');
+            } catch (err) {
+                log(src);
+                console.trace(err);
+                throw err;
             }
             return exports;
         };
         ret._source = src;
         return ret;
     } catch (e) {
-        console.log('source', src, '\n\n', e.stack + '');
+        log(src);
+        console.trace(e, 'source', src, '\n\n', e.message + '');
         throw e;
     }
 }

@@ -108,7 +108,7 @@ function Transition(...trans) {
      */
     this.transitionTo = (toProps)=> {
         return Object.keys(toProps).reduce((ret, tprop)=> {
-                
+
         });
     };
 
@@ -230,6 +230,7 @@ Transition.fromJSON = function (obj) {
 
 export const transition = Transition;
 
-export default function (postfix, value) {
+export default function (postfix, value, str, container, config) {
+    config.prefix = 'transition';
     return Transition(postfix, value).toCSS();
 }

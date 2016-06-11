@@ -10,6 +10,15 @@ describe('postcss-react-native', function () {
      transition: all 0.5s ease-out;
 
      */
+    it ('should parse simple-component', ()=> {
+        return test('simple-component', (f)=> {
+            const css = f({height: 1024, width: 768, scale: 1});
+            expect(css.default).to.exist;
+            expect(css.StyledText).to.exist;
+            return css;
+        });
+    });
+
     it('should parse transition', function () {
         /**
          * TODO - Make transition conform to dela, duration, property,timing-function
@@ -77,7 +86,7 @@ describe('postcss-react-native', function () {
                     "marginRight": 10,
                     "marginBottom": 5,
                     "marginLeft": 2,
-                    "color": "yellow",
+                    "color": "rgba(255, 255, 0, 1)",
                     "borderLeftWidth": 5,
                     "borderRightWidth": 5,
                     "borderTopColor": "green",
@@ -90,7 +99,10 @@ describe('postcss-react-native', function () {
         }, v=>v, {});
     });
     it('media should parse import', function () {
-        return test('import', v=>v, (f, source)=> {
+        return test('import', v=>v=>{
+            console.log(v);
+            return v;
+        }, (f, source)=> {
 
             expect(f).to.exist;
             return f;
@@ -100,7 +112,7 @@ describe('postcss-react-native', function () {
     it('media query stuff for android', function () {
         return test('media', (f, source)=> {
             const css = f({height: 1024, width: 768, scale: 1}, 'android');
-            expect(css.default).to.eql({
+            expect(css.default.__classes).to.eql({
                 "stuff": {
                     "borderBottomWidth": 6.666666666666666,
                     "borderTopWidth": 3,
@@ -108,7 +120,7 @@ describe('postcss-react-native', function () {
                     "marginRight": 10,
                     "marginBottom": 5,
                     "marginLeft": 2,
-                    "color": "purble",
+                    "color": "purple",
                     "borderLeftWidth": 5,
                     "borderRightWidth": 5,
                     "borderTopColor": "green",

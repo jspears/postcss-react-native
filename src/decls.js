@@ -57,7 +57,12 @@ function box(postfix, values, prefix, tag, table = TRBLV) {
     return _box(postfix, words(values), table);
 }
 const color = (postfix, value)=> {
-    const c = `rgba(${parseColor(value)['rgba'].join(', ')})`;
+    const pc = parseColor(value);
+    if (!pc || !pc.rgba) {
+        console.log('could not parse color', postfix, value);
+        return value;
+    }
+    const c = `rgba(${pc['rgba'].join(', ')})`;
     return postfix ? {[postfix]: c} : c;
 };
 
@@ -175,8 +180,9 @@ export function parse(decl, str, tag) {
         console.warn('unknown type', type, postfix);
         return;
     }
-    const values = handler(postfix, str, vendor, tag);
-    return values == null ? null : {type, vendor, values};
+    const config = {};
+    const values = handler(postfix, str, vendor, tag, config);
+    return values == null ? null : {type, vendor, values, ...config};
 }
 
 export default ({parse});

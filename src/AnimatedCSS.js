@@ -10,6 +10,8 @@ import ReactNative, {
     StyleSheet,
 } from 'react-native';
 
+import {window, WINDOW} from './componentHelpers';
+
 // Transform an object to an array the way react native wants it for transform styles
 // { a: x, b: y } => [{ a: x }, { b: y }]
 function createKeyedArray(obj) {
@@ -21,13 +23,13 @@ function createKeyedArray(obj) {
 }
 
 // Helper function to calculate transform values, args:
-// direction: in|out
+// animationDirection: in|out
 // originOrDestination: up|down|left|right
 // verticalValue: amplitude for up/down animations
 // horizontalValue: amplitude for left/right animations
-function getAnimationValueForDirection(direction, originOrDestination, verticalValue, horizontalValue) {
+function getAnimationValueForanimationDirection(animationDirection, originOrDestination, verticalValue, horizontalValue) {
     const isVertical = originOrDestination === 'up' || originOrDestination === 'down';
-    const modifier = (isVertical && direction === 'out' ? -1 : 1) * (originOrDestination === 'down' || originOrDestination === 'left' ? -1 : 1);
+    const modifier = (isVertical && animationDirection === 'out' ? -1 : 1) * (originOrDestination === 'down' || originOrDestination === 'left' ? -1 : 1);
     return modifier * (isVertical ? verticalValue : horizontalValue);
 }
 
@@ -105,8 +107,8 @@ function wrapStyleTransforms(style) {
 }
 
 // Determine to what value the animation should tween to
-function getAnimationTarget(iteration, direction) {
-    switch (direction) {
+function getAnimationTarget(iteration, animationDirection) {
+    switch (animationDirection) {
         case 'reverse':
             return 0;
         case 'alternate':
@@ -120,8 +122,8 @@ function getAnimationTarget(iteration, direction) {
 }
 
 // Like getAnimationTarget but opposite
-function getAnimationOrigin(iteration, direction) {
-    return getAnimationTarget(iteration, direction) ? 0 : 1;
+function getAnimationOrigin(iteration, animationDirection) {
+    return getAnimationTarget(iteration, animationDirection) ? 0 : 1;
 }
 
 function getDefaultStyleValue(key) {
@@ -168,12 +170,17 @@ const rangeCheck = ({inputRange, outputRange})=> {
     return (inputRange && outputRange && inputRange.length > 1 && outputRange.length > 1)
 };
 // Make (almost) any component animatable, similar to Animated.createAnimatedComponent
-export function createAnimatableComponent(component) {
+export function createAnimatableComponent(component, keyframes, name) {
     const Animatable = Animated.createAnimatedComponent(component);
     return class AnimatableComponent extends Component {
+
+        static displayName = `${name}AnimatableComponent`;
+
         static propTypes = {
             onAnimationBegin: PropTypes.func,
-            onAnimationEnd: PropTypes.func
+            onAnimationEnd: PropTypes.func,
+            animation: PropTypes.arrayOf(PropTypes.object),
+            transition: PropTypes.arrayOf(PropTypes.object)
 
         };
 
@@ -187,9 +194,17 @@ export function createAnimatableComponent(component) {
 
         constructor(props) {
             super(props);
-            const config = this.props.animate[0];
-            this.state = {
-                animationValue: new Animated.Value(getAnimationOrigin(0, config.direction)),
+            this.state = this.createState(props);
+
+        }
+
+        createState(props) {
+            const config = props.animation && props.animation[0];
+            if (!config) {
+                return {};
+            }
+            const state = {
+                animationValue: new Animated.Value(getAnimationOrigin(0, config.animationanimationDirection)),
                 animationStyle: {},
                 transitionStyle: {},
                 transitionValues: {},
@@ -197,11 +212,12 @@ export function createAnimatableComponent(component) {
             };
 
             if (props.transition) {
-                this.state = {
-                    ...this.state,
+                return {
+                    ...state,
                     ...this.initializeTransitionState(props.transition),
                 };
             }
+            return state;
         }
 
         initializeTransitionState(transitionKeys) {
@@ -246,28 +262,36 @@ export function createAnimatableComponent(component) {
         }
 
         componentDidMount() {
-            const {animate, onAnimationBegin, onAnimationEnd} = this.props;
-            const conf = animate[0];
-            const animation = this.createAnimate(conf);
-            const {delay, duration, name} = conf;
-            if (animation) {
-                if (delay) {
-                    this.setState({scheduledAnimation: name});
+            if (!this.state) {
+                this.setState(this.createState(this.props));
+            }
+            this.triggerAnimation(this.props);
+        }
+
+        triggerAnimation(props) {
+            const {animation, onAnimationBegin, onAnimationEnd} = props;
+            const conf = animation[0];
+            if (!conf) return;
+            const runAnimation = this.createAnimate(conf);
+            const {animationDelay, animationName} = conf;
+            if (animationName) {
+                if (animationDelay) {
+                    this.setState({animationName});
                     this._timer = setTimeout(() => {
                         onAnimationBegin();
-                        this.setState({scheduledAnimation: false}, () => animation().then(onAnimationEnd));
+                        this.setState({animationName: false}, () => runAnimation().then(onAnimationEnd));
                         this._timer = false;
-                    }, delay);
+                    }, animationDelay);
                     return;
                 }
                 /*  for (let i = LAYOUT_DEPENDENT_ANIMATIONS.length - 1; i >= 0; i--) {
                  if (animation.indexOf(LAYOUT_DEPENDENT_ANIMATIONS[i]) === 0) {
-                 this.setState({scheduledAnimation: name});
+                 this.setState({animationName: name});
                  return;
                  }
                  }*/
                 onAnimationBegin();
-                animation().then(onAnimationEnd);
+                runAnimation().then(onAnimationEnd);
             }
         }
 
@@ -278,18 +302,17 @@ export function createAnimatableComponent(component) {
         }
 
         componentWillReceiveProps(props) {
-            const {animation, duration, easing, transition, onAnimationBegin, onAnimationEnd} = props;
+            const {animation, animationDuration, easing, transition, onAnimationBegin, onAnimationEnd} = props;
 
             if (transition) {
                 const values = getStyleValues(transition, props.style);
-                this.transitionTo(values, duration, easing);
+                this.transitionTo(values, animationDuration, easing);
             } else if (animation !== this.props.animation) {
-                if (animation) {
-                    if (this.state.scheduledAnimation) {
-                        this.setState({scheduledAnimation: animation});
+                if (animation[0]) {
+                    if (this.state.animationName) {
+                        this.setState({animationName: animation[0].animationName});
                     } else {
-                        onAnimationBegin();
-                        this[animation](duration).then(onAnimationEnd);
+                        this.triggerAnimation(props);
                     }
                 } else {
                     this.stopAnimation();
@@ -298,18 +321,18 @@ export function createAnimatableComponent(component) {
         }
 
         _handleLayout(event) {
-            const {duration, onLayout, onAnimationBegin, onAnimationEnd} = this.props;
-            const {scheduledAnimation} = this.state;
+            const {onLayout} = this.props;
+            if (!this.state) return;
+            const {animationName} = this.state;
 
             this._layout = event.nativeEvent.layout;
             if (onLayout) {
                 onLayout(event);
             }
 
-            if (scheduledAnimation && !this._timer) {
-                onAnimationBegin();
-                this.setState({scheduledAnimation: false}, () => {
-                    this[scheduledAnimation](duration).then(onAnimationEnd);
+            if (animationName && !this._timer) {
+                this.setState({animationName: false}, () => {
+                    this.triggerAnimation(this.props);
                 });
             }
         }
@@ -358,8 +381,8 @@ export function createAnimatableComponent(component) {
                 if (key === 'transform') {
                     Object.keys(itk).forEach((transformKey)=> {
                         if (rangeCheck(itk[transformKey])) {
-                           const tr = ret[key] || (ret[key] = []);
-                           tr.push({[transformKey]: animationValue.interpolate(itk[transformKey])})
+                            const tr = ret[key] || (ret[key] = []);
+                            tr.push({[transformKey]: animationValue.interpolate(itk[transformKey])})
                         }
                     });
                 } else if (rangeCheck(itk)) {
@@ -370,9 +393,17 @@ export function createAnimatableComponent(component) {
         }
 
         createAnimate(conf) {
-            const {keyframes} = this.props;
+            const mix = this._layout ? Object.assign({
+                clientHeight: this._layout.height,
+                clientWidth: this._layout.width
+            }, WINDOW) : WINDOW;
+            const kf = keyframes[conf.animationName](mix);
+            const ref = Object.keys(kf).reduce((ret, key)=> {
+                ret[key] = kf[key](mix).__style;
+                return ret;
+            }, {});
             return ()=> {
-                return this.animate(conf, this.makeInteropolate(this.state.animationValue, keyframes[conf.name]));
+                return this.animate(conf, this.makeInteropolate(this.state.animationValue, ref));
             }
         }
 
@@ -386,7 +417,7 @@ export function createAnimatableComponent(component) {
 
         stopAnimation() {
             this.setState({
-                scheduledAnimation: false,
+                animationName: false,
                 animationStyle: {},
             });
             this.state.animationValue.stopAnimation();
@@ -397,32 +428,32 @@ export function createAnimatableComponent(component) {
         }
 
         _startAnimation(conf, currentIteration = 0, callback) {
-            let {direction='normal', duration=1000, delay=0, iterationCount=1, timingFunction='ease-in-out'} = conf;
+            let {animationDirection='normal', animationDuration=1000, animationDelay=0, animationIterationCount=1, animationTimingFunction='ease-in-out'} = conf;
             const {animationValue} = this.state;
-            const fromValue = getAnimationOrigin(currentIteration, direction);
-            const toValue = getAnimationTarget(currentIteration, direction);
+            const fromValue = getAnimationOrigin(currentIteration, animationDirection);
+            const toValue = getAnimationTarget(currentIteration, animationDirection);
             animationValue.setValue(fromValue);
 
             // This is on the way back reverse
             if ((
-                    (direction === 'reverse') ||
-                    (direction === 'alternate' && !toValue) ||
-                    (direction === 'alternate-reverse' && !toValue)
-                ) && timingFunction.match(/^ease\-(in|out)$/)) {
-                if (timingFunction.indexOf('-in') !== -1) {
-                    timingFunction = timingFunction.replace('-in', '-out');
+                    (animationDirection === 'reverse') ||
+                    (animationDirection === 'alternate' && !toValue) ||
+                    (animationDirection === 'alternate-reverse' && !toValue)
+                ) && animationTimingFunction.match(/^ease\-(in|out)$/)) {
+                if (animationTimingFunction.indexOf('-in') !== -1) {
+                    animationTimingFunction = animationTimingFunction.replace('-in', '-out');
                 } else {
-                    timingFunction = timingFunction.replace('-out', '-in');
+                    animationTimingFunction = animationTimingFunction.replace('-out', '-in');
                 }
             }
             Animated.timing(animationValue, {
                 toValue: toValue,
-                easing: EASING_FUNCTIONS[timingFunction],
-                isInteraction: !iterationCount,
-                duration,
+                easing: EASING_FUNCTIONS[animationTimingFunction],
+                isInteraction: !animationIterationCount,
+                duration:animationDuration,
             }).start(endState => {
                 currentIteration++;
-                if (endState.finished && !this.props.transition && (iterationCount === 'infinite' || currentIteration < iterationCount)) {
+                if (endState.finished && !this.props.transition && (animationIterationCount === 'infinite' || currentIteration < animationIterationCount)) {
                     this._startAnimation(conf, currentIteration, callback);
                 } else if (callback) {
                     callback(endState);
@@ -430,7 +461,7 @@ export function createAnimatableComponent(component) {
             });
         }
 
-        transition(fromValues, toValues, duration, easing) {
+        transition(fromValues, toValues, animationDuration, easing) {
             const transitionKeys = Object.keys(toValues);
             let {transitionValues, currentTransitionValues, transitionStyle} = this.getTransitionState(transitionKeys);
 
@@ -456,11 +487,11 @@ export function createAnimatableComponent(component) {
                 }
             });
             this.setState({transitionValues, transitionStyle, currentTransitionValues}, () => {
-                this._transitionToValues(toValues, duration || this.props.duration, easing);
+                this._transitionToValues(toValues, animationDuration || this.props.animationDuration, easing);
             });
         }
 
-        transitionTo(toValues, duration, easing) {
+        transitionTo(toValues, animationDuration, easing) {
             const {currentTransitionValues} = this.state;
 
             let transitions = {
@@ -472,7 +503,7 @@ export function createAnimatableComponent(component) {
                 const toValue = toValues[property];
 
                 if (INTERPOLATION_STYLE_PROPERTIES.indexOf(property) === -1 && this.state.transitionStyle[property] && this.state.transitionStyle[property] === this.state.transitionValues[property]) {
-                    return this._transitionToValue(this.state.transitionValues[property], toValue, duration, easing);
+                    return this._transitionToValue(this.state.transitionValues[property], toValue, animationDuration, easing);
                 }
 
                 let currentTransitionValue = currentTransitionValues[property];
@@ -485,23 +516,23 @@ export function createAnimatableComponent(component) {
             });
 
             if (Object.keys(transitions.from).length) {
-                this.transition(transitions.from, transitions.to, duration, easing);
+                this.transition(transitions.from, transitions.to, animationDuration, easing);
             }
         }
 
-        _transitionToValues(toValues, duration, easing) {
+        _transitionToValues(toValues, animationDuration, easing) {
             Object.keys(toValues).forEach(property => {
                 const transitionValue = this.state.transitionValues[property];
                 const toValue = toValues[property];
-                this._transitionToValue(transitionValue, toValue, duration, easing);
+                this._transitionToValue(transitionValue, toValue, animationDuration, easing);
             });
         }
 
-        _transitionToValue(transitionValue, toValue, duration, easing) {
-            if (duration || easing) {
+        _transitionToValue(transitionValue, toValue, animationDuration, easing) {
+            if (animationDuration || easing) {
                 Animated.timing(transitionValue, {
                     toValue: toValue,
-                    duration: duration || 1000,
+                    animationDuration: animationDuration || 1000,
                     easing: EASING_FUNCTIONS[easing || 'ease-in-out'],
                 }).start();
             } else {
@@ -512,13 +543,10 @@ export function createAnimatableComponent(component) {
         }
 
         render() {
-            const {style, children, onLayout, animation, duration, delay, transition, ...props} = this.props;
+            const {style, children, onLayout, animation, animationDuration, animationDelay, transition, ...props} = this.props;
             if (animation && transition) {
                 throw new Error('You cannot combine animation and transition props');
             }
-            const {scheduledAnimation} = this.state;
-            const hideStyle = (scheduledAnimation && scheduledAnimation.indexOf('In') !== -1 ? {opacity: 0} : false);
-
             return (
                 <Animatable
                     {...props}
@@ -528,15 +556,15 @@ export function createAnimatableComponent(component) {
             style,
             this.state.animationStyle,
             wrapStyleTransforms(this.state.transitionStyle),
-            hideStyle,
           ]}
                 >{children}</Animatable>
             );
         }
     };
 }
+/*
 
-export const View = createAnimatableComponent(ReactNative.View);
-export const Text = createAnimatableComponent(ReactNative.Text);
-export const Image = createAnimatableComponent(ReactNative.Image);
-export default View;
+ export const View = createAnimatableComponent(ReactNative.View);
+ export const Text = createAnimatableComponent(ReactNative.Text);
+ export const Image = createAnimatableComponent(ReactNative.Image);
+ export default View;*/

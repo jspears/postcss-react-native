@@ -1,13 +1,12 @@
 "use strict";
 
 import postcss  from 'postcss';
-import selectorParser from 'postcss-selector-parser';
 import {parse} from './decls';
 import {parseMedia} from './mediaSelector';
 import source from './source';
 import unescape from './util/unescape';
+import selector from './selector';
 
-const parser = selectorParser();
 const importRe = /^\s*(?:url\(([^)]*)\)|"([^"]*)"|'([^']*)')(?:\s*(.*)?)$/;
 const DEFAULT_OPTS = {
     toJSON(obj, {source:{input:{file='rules'}}}){
@@ -16,51 +15,34 @@ const DEFAULT_OPTS = {
     toStyleSheet(obj, {source:{input:{file='rules'}}}){
     }
 };
+const clsName = (name = '__current', pseudo='')=> {
+    return `${name}${pseudo}`;
+};
 const createWalker = ({css, tags})=> {
 
     return (rule) => {
-        const selector = parser.process(rule.selector).res;
-        let decls, tag;
-        selector.walk(function ({type, value, ns}) {
-            switch (type) {
-                case 'tag':
-                {
-                    tag = tags[value] || ( tags[value] = {css: {}, decls: [], transitions: []});
-                    if (ns) {
-                        tag.namespace = ns.replace('|', '');
-                    }
-                    decls = tag.decls;
-                    break;
-                }
-                case 'pseudo':
-                    if (tag) {
-                        tag.pseudo = tag.pseudo || (tag.pseudo = {});
-                        decls = tag.pseudo[value] || (tag.pseudo[value] = []);
-                    }
-                    break;
-                case 'class':
-                {
-                    if (tag) {
-                        tag.css[value] = decls || (decls = []);
-                    } else {
-                        css[value] = decls || (decls = []);
-                    }
-                    break;
-                }
-                case 'selector':
-                    break;
-                default:
-                    console.warn(`selectors of type ${type} are not supported yet`);
-            }
-
-        });
-
+        const decls = [];
         rule.walkDecls((decl)=> {
-            const d = parse(decl.prop, decl.value, tag, decl);
+            const d = parse(decl.prop, decl.value, decls);
             if (d != null)
                 decls && decls.push(d);
         });
+        if (decls.length) {
+            selector(rule.selector).map((v)=> {
+                if (v.tag) {
+                    const cName = clsName(v['class'], v.pseudo);
+                    const tName = `${v.namespace}|${v.tag}`;
+                    const t = tags[tName] || (tags[tName] = {});
+                    (t[cName] || (t[cName] = [])).push(...decls);
 
+                } else if (v.class || v.pseudo) {
+                    const cName = clsName(v['class'], v.pseudo);
+                    (css[cName] || (css[cName] = [])).push(...decls);
+                } else {
+                    console.log('dunno about this.', v);
+                }
+            });
+        }
     };
 };
 module.exports = postcss.plugin('postcss-react-native', function (opts) {
