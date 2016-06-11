@@ -1,0 +1,21 @@
+@namespace Text "react-native.Text";
+
+Text|StyledText {
+    color: red;
+    background-color: teal;
+    margin: 10px;
+    padding: 5px;
+}
+
+Text|StyledText.green {
+    color: green;
+}
+
+@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) {
+    Text|StyledText {
+        margin: 20px;
+    }
+    Text|StyledText.blue {
+        color:blue;
+    }
+}
