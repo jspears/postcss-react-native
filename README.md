@@ -15,11 +15,11 @@ although it shares no code.
  - [x] handles margin shorthand.
  - [x] supports checked pseudo selector.
  - [x] handles most font properties.
- - [x] Transitions - (In progress)
+ - [x] Transitions
  - [x] Imports
  - [ ] Implement content, before and after pseudo's.
  - [ ] Nested selectors (partial support)
- - [ ] Percentage units.
+ - [x] Percentage units.
  - [ ] Nice import from. I.E import from styles rather than dist.
  - [ ] filter properties not supported by react-native.  Tricky, because it is component dependent.
  - [ ] Support regular react (currently only react-native).
