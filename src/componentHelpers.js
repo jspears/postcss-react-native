@@ -76,8 +76,8 @@ export const calculate = (c, dyna = {}, classNames = [], styles = [], psuedos = 
             const t = transition[key];
             const r = ret.transition || (ret.transition = {});
             const re = Object.assign(r[key] || (r[key] = {}), t);
-            re.from = lastStyle(prevState.style, key);
-            re.to = lastStyle(ret.style, key)
+            re.from = from;
+            re.to = to;
         });
     }
 

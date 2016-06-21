@@ -226,7 +226,7 @@ export function createAnimatableComponent(component, keyframes, name) {
 
             transitionKeys.forEach(key => {
                 const value = transitionKeys[key];
-                if (INTERPOLATION_STYLE_PROPERTIES.indexOf(key) !== -1) {
+                if (key === 'transform') {
                     transitionValues[key] = new Animated.Value(0);
                     styleValues[key] = value;
                 } else {
@@ -344,14 +344,6 @@ export function createAnimatableComponent(component, keyframes, name) {
 
                 Object.keys(frame).map(fk=> {
                     if (fk in frame) {
-                        /**
-                         *  transform: [{
-     translateY: this.state.fadeAnim.interpolate({
-       inputRange: [0, 1],
-       outputRange: [150, 0]  // 0 : 150, 0.5 : 75, 1 : 0
-     }),
-   }],
-                         */
                         if (fk === 'transform') {
                             const c = ret[fk] || (ret[fk] = {});
                             for (const transform of frame[fk]) {
@@ -465,18 +457,22 @@ export function createAnimatableComponent(component, keyframes, name) {
             transitionKeys.forEach(property => {
                 const fromValue = fromValues[property];
                 const toValue = toValues[property];
-                let transitionValue = transitionValues[property];
-                if (!transitionValue) {
-                    transitionValue = new Animated.Value(0);
-                }
+                const transitionValue = transitionValues[property] || ( transitionValues[property] = new Animated.Value(0));
                 transitionStyle[property] = transitionValue;
-
-                if (INTERPOLATION_STYLE_PROPERTIES.indexOf(property) !== -1) {
+                if (property == 'transform') {
                     transitionValue.setValue(0);
-                    transitionStyle[property] = transitionValue.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [fromValue, toValue],
-                    });
+                    transitionStyle.transform = fromValue.reduce((r, v, i)=> {
+                        r.push(...Object.keys(v).map(transformKey => {
+                            const outputRange = [v[transformKey], toValue[i][transformKey]];
+                            return {
+                                [transformKey]: transitionValue.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange
+                                })
+                            };
+                        }));
+                        return r;
+                    }, []);
                     currentTransitionValues[property] = toValue;
                     toValues[property] = 1;
                 } else {
@@ -504,8 +500,7 @@ export function createAnimatableComponent(component, keyframes, name) {
                 if (transitionStyle && transitionValues && INTERPOLATION_STYLE_PROPERTIES.indexOf(property) === -1 && transitionStyle[property] && transitionStyle[property] === transitionValues[property]) {
                     return this._transitionToValue(transitionValues[property], toValue.to, toValue.duration, toValue.timingFunction);
                 }
-                const currentTransitionValue = currentTransitionValues == null ? toValue.from : currentTransitionValues[property];
-                transitions.from[property] = currentTransitionValue;
+                transitions.from[property] = currentTransitionValues ? currentTransitionValues[property] : toValue.from;
                 transitions.to[property] = toValue.to;
                 transitions.duration[property] = toValue.duration;
                 transitions.easing[property] = toValue.timingFunction;
@@ -523,7 +518,7 @@ export function createAnimatableComponent(component, keyframes, name) {
             });
         }
 
-        _transitionToValue(transitionValue, toValue, duration = 1000, timingFunction = 'ease-in-out') {
+        _transitionToValue(transitionValue, toValue = 1, duration = 1000, timingFunction = 'ease-in-out') {
             Animated.timing(transitionValue, {
                 toValue,
                 duration,
@@ -536,6 +531,7 @@ export function createAnimatableComponent(component, keyframes, name) {
             if (animation && transition) {
                 throw new Error('You cannot combine animation and transition props');
             }
+
             return (
                 <Animatable
                     {...props}
@@ -543,8 +539,8 @@ export function createAnimatableComponent(component, keyframes, name) {
                     onLayout={event => this._handleLayout(event)}
                     style={[
             style,
-            this.state.animationStyle,
-            this.state.transitionStyle
+            this.state.animationStyle  || {},
+            this.state.transitionStyle || {}
           ]}
                 >{children}</Animatable>
             );
