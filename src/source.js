@@ -56,6 +56,20 @@ const pdecl = (root, type, values) => {
     if (type === 'transform' && Array.isArray(values)) {
         return writeArray(root, type, values);
     }
+    if (type === 'transition' && Array.isArray(values)) {
+        return values.map((v)=> {
+            const tr = `${root}[${quote(v.property)}]`;
+            return `
+                if (!${tr}) ${tr} = {};
+                ${tr}.delay = ${v.delay};
+                ${tr}.duration = ${v.duration};
+                ${tr}.timingFunction = ${quote(v['timing-function'])};
+                ${tr}.property = ${quote(v.property)};
+            `
+
+        }).join('\n');
+
+    }
     const dstr = Object.keys(values).reduce((str, key)=> {
         const v = values[key];
         if (!isObjectLike(v)) {
@@ -331,8 +345,8 @@ export const tagsToTypes = ({rules = []})=> {
 
     const ret = {};
 
-    rules.forEach(({tags, expressions})=>{
-        Object.keys(tags).forEach((tagKey)=>{
+    rules.forEach(({tags, expressions})=> {
+        Object.keys(tags).forEach((tagKey)=> {
             const rtag = ret[tagKey] || (ret[tagKey] = []);
             const css = tags[tagKey];
             rtag.push({css, expressions})
@@ -341,7 +355,6 @@ export const tagsToTypes = ({rules = []})=> {
 
     const str = tagsToType(ret);
     return str;
-
 
 
 };

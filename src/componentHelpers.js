@@ -35,13 +35,21 @@ export const toggle = (all, str)=> {
     return parts;
 };
 
-export const calculate = (c, dyna = {}, classNames = [], styles = [], psuedos = []) => {
+const lastStyle = (styles, key)=> {
+    if (!styles) return;
+    for (let i = styles.length - 1; i != -1; i--) {
+        if (styles[i][key])
+            return styles[i][key];
+    }
+};
+
+export const calculate = (c, dyna = {}, classNames = [], styles = [], psuedos = [], prevState) => {
     const {x, y, width, height} = (c && c.layout) || {};
 
 
     const config = Object.assign({}, WINDOW, {clientHeight: height, clientWidth: width});
     const ret = {config, pseudos: psuedos.join(',')};
-
+    let transition;
     for (const className of classNamesWithPsuedos(classNames, psuedos)) {
 
         if (className in dyna) {
@@ -54,9 +62,23 @@ export const calculate = (c, dyna = {}, classNames = [], styles = [], psuedos = 
                 (ret.animation || (ret.animation = [])).push(__animation);
             }
             if (!isObjectEmpty(__transition)) {
-                (ret.transition || (ret.transition = [])).push(__transition);
+                transition = Object.assign(transition || {}, __transition);
             }
         }
+    }
+    if (transition) {
+        //ret.transition =
+        Object.keys(transition).forEach((key)=> {
+            const from = lastStyle(prevState.style, key), to = lastStyle(ret.style, key);
+            if (from == null || to == null) {
+                return;
+            }
+            const t = transition[key];
+            const r = ret.transition || (ret.transition = {});
+            const re = Object.assign(r[key] || (r[key] = {}), t);
+            re.from = lastStyle(prevState.style, key);
+            re.to = lastStyle(ret.style, key)
+        });
     }
 
     return ret;

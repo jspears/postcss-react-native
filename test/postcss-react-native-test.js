@@ -10,7 +10,7 @@ describe('postcss-react-native', function () {
      transition: all 0.5s ease-out;
 
      */
-    it ('should parse simple-component', ()=> {
+    it('should parse simple-component', ()=> {
         return test('simple-component', (f)=> {
             const css = f({height: 1024, width: 768, scale: 1});
             expect(css.default).to.exist;
@@ -36,6 +36,7 @@ describe('postcss-react-native', function () {
                             "css": {
                                 "t1": [
                                     {
+                                        "prefix": "transition",
                                         "type": "transition",
                                         "vendor": false,
                                         "values": [
@@ -99,7 +100,7 @@ describe('postcss-react-native', function () {
         }, v=>v, {});
     });
     it('media should parse import', function () {
-        return test('import', v=>v=>{
+        return test('import', v=>v=> {
             console.log(v);
             return v;
         }, (f, source)=> {
@@ -112,7 +113,7 @@ describe('postcss-react-native', function () {
     it('media query stuff for android', function () {
         return test('media', (f, source)=> {
             const css = f({height: 1024, width: 768, scale: 1}, 'android');
-            expect(css.default.__classes).to.eql({
+            expect(css.default).to.eql({
                 "stuff": {
                     "borderBottomWidth": 6.666666666666666,
                     "borderTopWidth": 3,
@@ -120,7 +121,7 @@ describe('postcss-react-native', function () {
                     "marginRight": 10,
                     "marginBottom": 5,
                     "marginLeft": 2,
-                    "color": "purple",
+                    "color": "purble",
                     "borderLeftWidth": 5,
                     "borderRightWidth": 5,
                     "borderTopColor": "green",
@@ -150,25 +151,36 @@ describe('postcss-react-native', function () {
     it('should parse welcome', function () {
         return test('welcome', (f, source)=> {
             const css = f({height: 1024, width: 768, scale: 1}, 'android');
+
             expect(css.default).to.eql({
                 "container": {
                     "flex": 1,
                     "justifyContent": "center",
                     "alignItems": "center",
-                    "backgroundColor": "#F5FCFF"
+                    "backgroundColor": "rgba(192, 192, 192, 1)"
                 },
                 "welcome": {
                     "fontSize": 20,
+                    "fontFamily": "Thonburi",
                     "textAlign": "center",
-                    "marginTop": 10,
-                    "marginRight": 10,
-                    "marginBottom": 10,
-                    "marginLeft": 10
+                    "marginTop": 0,
+                    "marginRight": 0,
+                    "marginBottom": 0,
+                    "marginLeft": 0
                 },
                 "instructions": {
                     "textAlign": "center",
-                    "color": "#333333",
-                    "marginBottom": 5
+                    "color": "rgba(51, 51, 51, 1)",
+                    "marginBottom": 5,
+                    "borderTopWidth": 1,
+                    "borderStyle": "solid",
+                    "borderTopColor": "green",
+                    "borderRightWidth": 1,
+                    "borderRightColor": "green",
+                    "borderBottomWidth": 1,
+                    "borderBottomColor": "green",
+                    "borderLeftWidth": 1,
+                    "borderLeftColor": "green"
                 }
             });
         });

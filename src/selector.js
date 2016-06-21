@@ -13,10 +13,11 @@ export default function selector(selectorString) {
             {
                 if (!sel) {
                     sel = {};
-                    if (namespace){
-                        sel.namespace = namespace;
-                    }
+
                     all.push(sel);
+                }
+                if (namespace) {
+                    sel.namespace = namespace;
                 }
                 sel[type] = value;
                 break;
@@ -24,7 +25,7 @@ export default function selector(selectorString) {
             case 'selector':
                 if (sel) {
                     sel = {};
-                    if (namespace){
+                    if (namespace) {
                         sel.namespace = namespace;
                     }
                     all.push(sel);

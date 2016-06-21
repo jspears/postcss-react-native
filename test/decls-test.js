@@ -55,14 +55,11 @@ describe('decls', function () {
         })
     });
     it('should parse specific', function () {
-        const {type, vendor, values:{top, left, bottom, right}} = parse('-ios-margin-left', '5px');
+        const {type, vendor, values} = parse('-ios-margin-left', '5px');
         expect(type).to.eql('margin');
-        expect(vendor).to.eql('ios');
-        expect(top).to.not.exist;
-        expect(bottom).to.not.exist;
-        expect(right).to.not.exist;
-
-        expect(left).to.eql('5px');
+        expect(values).to.eql({
+            left: '5px'
+        });
     });
 
     it('should parse border radius', function () {

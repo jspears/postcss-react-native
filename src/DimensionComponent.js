@@ -45,7 +45,7 @@ export default function create(Wrapped, dynaStyles, keyframes, name) {
         componentWillMount() {
             this._resize = listen();
             this._listenWindow || (this._listenWindow = window.subscribe(this.recalc));
-       //     this._listenChildResize = this._resize.subscribe(this.recalc, this.props.onResize);
+            //     this._listenChildResize = this._resize.subscribe(this.recalc, this.props.onResize);
             this.recalc(this.state.config);
         }
 
@@ -56,11 +56,11 @@ export default function create(Wrapped, dynaStyles, keyframes, name) {
 
         recalc = (config) => {
             config = config || this.state.config;
-            this.setState(calculate(config, _styles, this._className, this._styles, splitComma(this.state.pseudos)));
+            this.setState(calculate(config, _styles, this._className, this._styles, splitComma(this.state.pseudos), this.state));
         };
 
         handlePress = (e)=> {
-            this.setState(calculate(this.state.config, _styles, this._className, this._styles, toggle(this.state.pseudos, 'checked')));
+            this.setState(calculate(this.state.config, _styles, this._className, this._styles, toggle(this.state.pseudos, 'checked'), this.state));
         };
 
         render() {

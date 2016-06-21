@@ -232,5 +232,6 @@ export const transition = Transition;
 
 export default function (postfix, value, str, container, config) {
     config.prefix = 'transition';
-    return Transition(postfix, value).toCSS();
+    const ret = Transition(postfix, value).toCSS();
+    return ret;
 }

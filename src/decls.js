@@ -53,7 +53,7 @@ function _box(postfix, values, table = TRBLV, rtable = RTRBLV) {
         return obj;
     }, {});
 }
-function box(postfix, values, prefix, tag, table = TRBLV) {
+function box(postfix, values, prefix, tag, decls, table = TRBLV) {
     return _box(postfix, words(values), table);
 }
 const color = (postfix, value)=> {
