@@ -7,6 +7,8 @@
 Currently a proof of concept.  It roughly based on  [react-native-css](https://github.com/sabeurthabti/react-native-css)
 although it shares no code.
 
+
+
 ##Capablities
  - [x] Recalculate stylesheet based on media queries and current dimensions.
  - [x] -ios,-android vendor prefixes.
@@ -23,7 +25,7 @@ although it shares no code.
  - [ ] Nice import from. I.E import from styles rather than dist.
  - [ ] filter properties not supported by react-native.  Tricky, because it is component dependent.
  - [ ] Support regular react (currently only react-native).
- - [ ] Support background images.
+ - [ ] Support background images, via Image with children.
 
 ## Usage
 

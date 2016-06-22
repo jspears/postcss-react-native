@@ -12,17 +12,9 @@ import  {
 
 import {WINDOW} from './componentHelpers';
 
-
 // These styles are not number based and thus needs to be interpolated
 const INTERPOLATION_STYLE_PROPERTIES = [
-    // Transform styles
-    'rotate',
-    'rotateX',
-    'rotateY',
-    'rotateZ',
-    'skewX',
-    'skewY',
-    'transformMatrix',
+
     // View styles
     'backgroundColor',
     'borderColor',
@@ -64,25 +56,6 @@ function getAnimationTarget(iteration, animationDirection) {
 function getAnimationOrigin(iteration, animationDirection) {
     return getAnimationTarget(iteration, animationDirection) ? 0 : 1;
 }
-/*
-function getDefaultStyleValue(key) {
-    if (key === 'backgroundColor') {
-        return 'rgba(0,0,0,0)';
-    }
-    if (key === 'color' || key.indexOf('Color') !== -1) {
-        return 'rgba(0,0,0,1)';
-    }
-    if (key.indexOf('rotate') !== -1 || key.indexOf('skew') !== -1) {
-        return '0deg';
-    }
-    if (key === 'fontSize') {
-        return 14;
-    }
-    if (key === 'opacity') {
-        return 1;
-    }
-    return 0;
-}*/
 
 const asc = (a, b)=>a - b;
 
@@ -129,15 +102,11 @@ export function createAnimatableComponent(component, keyframes, name) {
                 animationStyle: {},
                 transitionStyle: {},
                 transitionValues: {},
-                currentTransitionValues: {},
+                currentTransitionValues: {}
             };
             return state;
         }
 
-        getTransitionState() {
-            let {transitionValues={}, currentTransitionValues={}, transitionStyle={}} = this.state;
-            return {transitionValues, currentTransitionValues, transitionStyle};
-        }
 
         setNativeProps(nativeProps) {
             if (this._root) {
@@ -149,7 +118,11 @@ export function createAnimatableComponent(component, keyframes, name) {
             if (!this.state) {
                 this.setState(this.createState(this.props));
             }
-            this.triggerAnimation(this.props);
+            if (this.props.transition) {
+                this.transitionTo(this.props.transition);
+            } else {
+                this.triggerAnimation(this.props);
+            }
         }
 
         triggerAnimation(props) {
@@ -338,79 +311,76 @@ export function createAnimatableComponent(component, keyframes, name) {
 
 
         transitionTo(transit) {
-            const {currentTransitionValues, transitionStyle, transitionValues} = this.state;
+            const {transitionStyle, transitionValues} = this.state;
 
-            let transitions = {
-                from: {},
-                to: {},
-                easing: {},
-                duration: {}
-            };
+            let doTransition = false;
 
             Object.keys(transit).forEach(property => {
-                const toValue = transit[property];
-
                 if (transitionStyle && transitionValues && INTERPOLATION_STYLE_PROPERTIES.indexOf(property) === -1 && transitionStyle[property] && transitionStyle[property] === transitionValues[property]) {
-                    return this._transitionToValue(transitionValues[property], toValue.to, toValue.duration, toValue.timingFunction);
+                    return this._transitionToValue(transitionValues[property], transit[property]);
+                } else {
+                    doTransition = true;
                 }
-                transitions.from[property] = currentTransitionValues ? currentTransitionValues[property] : toValue.from;
-                transitions.to[property] = toValue.to;
-                transitions.duration[property] = toValue.duration;
-                transitions.easing[property] = toValue.timingFunction;
             });
 
-            if (Object.keys(transitions.from).length) {
-                this.transition(transitions.from, transitions.to, transitions.duration, transitions.easing);
+            if (doTransition) {
+                this.transition(transit);
             }
         }
 
-        transition(fromValues, toValues, durations, easings) {
-            const transitionKeys = Object.keys(toValues);
-            let {transitionValues ={}, currentTransitionValues={}, transitionStyle={}} = this.getTransitionState(transitionKeys);
-
-            transitionKeys.forEach(property => {
-                const fromValue = fromValues[property];
-                const toValue = toValues[property];
+        transition(transit) {
+            const {transitionValues={}, currentTransitionValues={}, transitionStyle={}} = this.state;
+            Object.keys(transit).forEach(property => {
+                const fromValue = transit[property].from;
+                const toValue = transit[property].to;
                 const transitionValue = transitionValues[property] || ( transitionValues[property] = new Animated.Value(0));
                 transitionStyle[property] = transitionValue;
                 if (property == 'transform') {
                     transitionValue.setValue(0);
-                    transitionStyle.transform = fromValue.reduce((r, v, i)=> {
-                        Object.keys(v).forEach(transformKey => {
-                            const outputRange = [v[transformKey], toValue[i][transformKey]];
-                            return r.push({
+                    transitionStyle.transform = fromValue.reduce((r, fv, i)=> {
+                        const tv = toValue[i];
+                        Object.keys(fv).forEach(transformKey => {
+                            r.push({
                                 [transformKey]: transitionValue.interpolate({
                                     inputRange: [0, 1],
-                                    outputRange
+                                    outputRange: [fv[transformKey], tv[transformKey]]
                                 })
                             });
                         });
                         return r;
                     }, []);
                     currentTransitionValues[property] = toValue;
-                    toValues[property] = 1;
+//                    toValues[property] = 1;
+                } else if (INTERPOLATION_STYLE_PROPERTIES.includes(property)) {
+                    transitionValue.setValue(0);
+                    transitionStyle[property] = transitionValue.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [fromValue, toValue]
+                    });
                 } else {
                     transitionValue.setValue(fromValue);
                 }
             });
 
-            this.setState({transitionValues, transitionStyle, currentTransitionValues}, () => {
-                this._transitionToValues(toValues, durations, easings);
+            this.setState({
+                transitionValues,
+                transitionStyle,
+                currentTransitionValues
+            }, this._transitionToValues.bind(this, transit));
+        }
+
+        _transitionToValues(transit) {
+            const {transitionValues={}} = this.state;
+            Object.keys(transit).forEach(property => {
+                this._transitionToValue(transitionValues[property], transit[property]);
             });
         }
 
-        _transitionToValues(toValues, durations, easings) {
-            const {transitionValues} = this.state;
-            Object.keys(toValues).forEach(property => {
-                this._transitionToValue(transitionValues[property], toValues[property], durations[property], easings[property]);
-            });
-        }
-
-        _transitionToValue(transitionValue, toValue = 1, duration = 1000, timingFunction = 'ease-in-out') {
+        _transitionToValue(transitionValue, {toValue = 1, duration = 1000, timingFunction = 'ease-in-out'}) {
             Animated.timing(transitionValue, {
                 toValue,
                 duration,
-                easing: EASING_FUNCTIONS[timingFunction],
+                easing: EASING_FUNCTIONS[timingFunction]
             }).start();
         }
 
@@ -426,10 +396,10 @@ export function createAnimatableComponent(component, keyframes, name) {
                     ref={element => this._root = element}
                     onLayout={event => this._handleLayout(event)}
                     style={[
-            style,
-            this.state.animationStyle,
-            this.state.transitionStyle
-          ]}>{children}</Animatable>
+                        style,
+                        this.state.animationStyle,
+                        this.state.transitionStyle
+                    ]}>{children}</Animatable>
             );
         }
     };
