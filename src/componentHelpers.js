@@ -1,6 +1,10 @@
-import {Platform} from 'react-native';
+import {Platform, Dimensions} from 'react-native';
 import RCTDeviceEventEmitter from 'RCTDeviceEventEmitter';
 import listen from './listen';
+
+const whiteRe = /\s+?/;
+const commaRe = /,\s*/;
+
 export const classNamesWithPsuedos = (classNames = [], psuedos)=> {
 
     const all = ['__current', ...classNames];
@@ -8,16 +12,18 @@ export const classNamesWithPsuedos = (classNames = [], psuedos)=> {
         return all
     }
 
-    const classes = all.concat(all.reduce((ret, name)=> {
+    return all.concat(all.reduce((ret, name)=> {
         for (const pseudo of psuedos) {
             ret.push(`${name}:${pseudo}`);
         }
         return ret;
     }, []));
-    return classes;
 };
+
 export const isObjectEmpty = (value) => {
     if (value == null) return true;
+    //noinspection LoopStatementThatDoesntLoopJS,JSUnusedLocalSymbols
+
     for (var key in value) {
         return false;
     }
@@ -44,6 +50,7 @@ const lastStyle = (styles, key)=> {
 };
 
 export const calculate = (c, dyna = {}, classNames = [], styles = [], psuedos = [], prevState) => {
+    //noinspection JSUnusedLocalSymbols
     const {x, y, width, height} = (c && c.layout) || {};
 
 
@@ -62,12 +69,12 @@ export const calculate = (c, dyna = {}, classNames = [], styles = [], psuedos = 
                 (ret.animation || (ret.animation = [])).push(__animation);
             }
             if (!isObjectEmpty(__transition)) {
+                //noinspection JSUnusedAssignment
                 transition = Object.assign(transition || {}, __transition);
             }
         }
     }
     if (transition) {
-        //ret.transition =
         Object.keys(transition).forEach((key)=> {
             const from = lastStyle(prevState.style, key), to = lastStyle(ret.style, key);
             if (from == null || to == null) {
@@ -92,13 +99,14 @@ export const asArray = (val)=> {
 export const splitClass = (str)=> {
     if (!str) return;
     if (typeof str === 'string') {
-        return str.split(/\s+?/);
+        return str.split(whiteRe);
     }
     return str;
 };
 
+
 export const splitComma = (str)=> {
-    return str ? str.split(/\,\s*/) : [];
+    return str ? str.split(commaRe) : [];
 };
 export const WINDOW = {
     vendor: Platform.OS
@@ -106,7 +114,7 @@ export const WINDOW = {
 
 export const window = listen();
 
-RCTDeviceEventEmitter.addListener('didUpdateDimensions', function (update) {
+RCTDeviceEventEmitter.addListener('didUpdateDimensions', () => {
     Object.assign(WINDOW, Dimensions.get('window'));
     window();
 });

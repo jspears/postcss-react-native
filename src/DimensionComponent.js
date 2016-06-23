@@ -1,7 +1,6 @@
 import React, {Component, PropTypes} from 'react';
 import {View, Dimensions, PixelRatio, Platform} from 'react-native';
 import {calculate, asArray, splitClass, splitComma, toggle, WINDOW, window} from './componentHelpers';
-import RCTDeviceEventEmitter from 'RCTDeviceEventEmitter';
 import listen from './listen';
 import {createAnimatableComponent} from './AnimatedCSS';
 
@@ -64,6 +63,7 @@ export default function create(Wrapped, dynaStyles, keyframes, name) {
         };
 
         render() {
+            
             const {children, onResize, className, ...props} = this.props;
 
             const {animation, transition, config, pseudos, ...state} = this.state;

@@ -112,7 +112,10 @@ export const HANDLERS = Object.assign({}, DECLS, {
                     'space-around')(postfix, value);
         }
     },
-
+    content(postfix, value, vendor, tag, config){
+        config.prefix = 'content';
+        return value;
+    },
     align(postfix, value){
         switch (postfix) {
             case 'items':

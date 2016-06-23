@@ -58,13 +58,14 @@ const pdecl = (root, type, values) => {
     }
     if (type === 'transition' && Array.isArray(values)) {
         return values.map((v)=> {
-            const tr = `${root}[${quote(v.property)}]`;
+            const prop = quote(camel(v.property));
+            const tr = `${root}[${prop}]`;
             return `
                 if (!${tr}) ${tr} = {};
                 ${tr}.delay = ${v.delay};
                 ${tr}.duration = ${v.duration};
                 ${tr}.timingFunction = ${quote(v['timing-function'])};
-                ${tr}.property = ${quote(v.property)};
+                ${tr}.property = ${prop};
             `
 
         }).join('\n');
