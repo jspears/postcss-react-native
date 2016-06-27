@@ -7,7 +7,7 @@
 Currently a proof of concept.  It roughly based on  [react-native-css](https://github.com/sabeurthabti/react-native-css)
 although it shares no code.
 
-[![Alt text for your video](ScreenShot.jpg)](http://www.youtube.com/watch?v=T-D1KVIuvjA)
+[![Screen Cast](https://github.com/jspears/postcss-react-native/blob/master/ScreenShot.png)](https://github.com/jspears/PostcssReactNativeDemo/raw/master/ReactNativeCSS.mov)
 
 
 ##Capablities
