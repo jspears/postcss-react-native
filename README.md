@@ -34,6 +34,7 @@ although it shares no code.
  - [ ] Support regular react (currently only react-native).
  - [ ] Implement content, before and after pseudo's.
  - [ ] Nested selectors (partial support)
+ - [ ] Support props selectors View[color="green"] {}.
  - [ ] Support background images, via Image with children.
 
 ## Usage
@@ -193,4 +194,59 @@ export default class Example extends Component {
 
 
 ```
+
+## Animations
+
+```css
+@namespace Text "react-native.Text";
+
+Text|Bounce {
+    height: 20px;
+    width: 100px;
+    background-color: yellow;
+    border-radius: 10px;
+    text-align: center;
+    border:1px solid red;
+}
+
+Text|Bounce:checked {
+    animation-name: bounce;
+    animation-duration: 1s;
+    animation-direction: alternate;
+    animation-timing-function: linear;
+    animation-iteration-count: 1;
+}
+
+@keyframes bounce {
+    from {
+        transform: translateY(0)
+    }
+    20% {
+        transform: translateY(0)
+    }
+    40% {
+        transform: translateY(-30)
+    }
+    43% {
+        transform: translateY(-30)
+    }
+    53% {
+        transform: translateY(0)
+    }
+    70% {
+        transform: translateY(-15)
+    }
+    80% {
+        transform: translateY(0)
+    }
+    90% {
+        transform: translateY(-4)
+    }
+    to {
+        transform: translateY(0)
+    }
+}
+
+```
+
 
