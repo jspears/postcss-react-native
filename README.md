@@ -43,7 +43,7 @@ although it shares no code.
 postcss([ require('postcss-react-native') ])
 ```
 
-See [PostCSS] docs for examples for your environment.
+See the [PostCSS docs](https://github.com/postcss/postcss#usage) for examples for your environment.
 
 ## Watcher Usage
 Since most React Native environments do not have a css pipeline
