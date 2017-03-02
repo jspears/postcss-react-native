@@ -223,8 +223,11 @@ export const rulesAreEqual = (ruleA, ruleB) => {
 };
 
 export const optimizeBorderRule = (rule) => {
-  if (Object.keys(rule.values).every(side => rulesAreEqual(rule.values[side], rule.values.top))) {
-      rule.values = rule.values.top;
+  const keys = Object.keys(rule.values);
+  if (rule.values.top && rule.values.bottom && rule.values.left && rule.values.right) {
+      if (keys.every(side => rulesAreEqual(rule.values[side], rule.values.top))) {
+          rule.values = rule.values.top;
+      }
   }
   return rule;
 };

@@ -88,8 +88,7 @@ describe('postcss-react-native', function () {
                     "marginBottom": 5,
                     "marginLeft": 2,
                     "color": "rgba(255, 255, 0, 1)",
-                    "borderLeftWidth": 5,
-                    "borderRightWidth": 5,
+                    "borderWidth": 5,
                     "borderTopColor": "green",
                     "borderStyle": "solid"
                 },
@@ -121,8 +120,7 @@ describe('postcss-react-native', function () {
                     "marginBottom": 5,
                     "marginLeft": 2,
                     "color": "purble",
-                    "borderLeftWidth": 5,
-                    "borderRightWidth": 5,
+                    "borderWidth": 5,
                     "borderTopColor": "green",
                     "borderStyle": "solid"
 
