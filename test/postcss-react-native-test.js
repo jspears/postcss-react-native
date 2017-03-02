@@ -101,7 +101,6 @@ describe('postcss-react-native', function () {
     });
     it('media should parse import', function () {
         return test('import', v=>v=> {
-            console.log(v);
             return v;
         }, (f, source)=> {
 
@@ -203,7 +202,6 @@ describe('postcss-react-native', function () {
     it('should parse component', function (done) {
         return testTransform('component', (f, source)=> {
             return f({height: 1024, width: 768, scale: 1}).then((ret, css, src)=> {
-                console.log(src);
                 expect(ret).to.exist;
                 done();
             }, done);
@@ -213,7 +211,6 @@ describe('postcss-react-native', function () {
     it('should parse clazz-pseudo', function (done) {
         return testTransform('clazz-pseudo', (f, source)=> {
             return f({height: 1024, width: 768, scale: 1}).then((ret, css, src)=> {
-                console.log(src);
                 expect(ret).to.exist;
                 done();
             }, done);
@@ -222,7 +219,6 @@ describe('postcss-react-native', function () {
     it('should parse real-import', function (done) {
         return testTransform('real-import', (f)=> {
             return f({height: 1024, width: 768, scale: 1}).then((ret, css, src)=> {
-                console.log(src);
                 expect(ret).to.exist;
                 done();
             }, done);

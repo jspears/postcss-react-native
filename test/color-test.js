@@ -7,7 +7,6 @@ describe('color', function(){
     it('should parse purple', ()=>{
 
         const r = color('purple');
-        console.log('r',r);
     });
     it('should parse color decl', ()=>{
       return testString('.c { color:#fff }', {
