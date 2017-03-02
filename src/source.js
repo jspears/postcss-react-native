@@ -214,6 +214,52 @@ export const writeImports = (imports = []) => {
           ${str}          
 `;
 };
+
+export const rulesAreEqual = (ruleA, ruleB) => {
+    const ruleAProps = Object.keys(ruleA);
+    const ruleBProps = Object.keys(ruleB);
+    return ruleAProps.every(key => ruleAProps[key] === ruleBProps[key]) &&
+      ruleAProps.length === ruleBProps.length;
+};
+
+export const optimizeBorderRule = (rule) => {
+  const keys = Object.keys(rule.values);
+  if (rule.values.top && rule.values.bottom && rule.values.left && rule.values.right) {
+      if (keys.every(side => rulesAreEqual(rule.values[side], rule.values.top))) {
+          rule.values = rule.values.top;
+      }
+  }
+  return rule;
+};
+
+const OPTIMIZE_HANDLERS = {
+    border: optimizeBorderRule
+};
+
+export const optimizeCssRule = (cssRule) => {
+  cssRule.forEach((rule, index) => {
+      if (OPTIMIZE_HANDLERS.hasOwnProperty(rule.type)) {
+          const optimizeHandler = OPTIMIZE_HANDLERS[rule.type];
+          cssRule[index] = optimizeHandler(rule);
+      }
+  });
+  return cssRule;
+};
+
+export const optimizeCssRules = (cssRules) => {
+    Object.keys(cssRules).forEach(rule => {
+       cssRules[rule] = optimizeCssRule(cssRules[rule]);
+    });
+    return cssRules;
+};
+
+export const optimizeRules = (rules) => {
+    rules.forEach(rule => {
+        rule.css = optimizeCssRules(rule.css);
+    });
+    return rules;
+};
+
 export const source = (model)=> {
     return `
      "use strict";
@@ -244,7 +290,7 @@ export const source = (model)=> {
      exports.internals = function(_internals){
         const internals = _internals || {};
         //rules
-        ${join(model.rules, writeRule)}
+        ${join(optimizeRules(model.rules), writeRule)}
         
         return internals;
      

@@ -6,9 +6,7 @@ describe('animation', function () {
         return testString(read('test/fixtures/animation.css'), {
             toJSON(f, css){
                 
-                console.log(JSON.stringify(f, null, 2));
                 expect(f).to.exist;
-                console.log(source(f));
                 return f;
             }
         });
