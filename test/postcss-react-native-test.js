@@ -171,15 +171,9 @@ describe('postcss-react-native', function () {
                     "textAlign": "center",
                     "color": "rgba(51, 51, 51, 1)",
                     "marginBottom": 5,
-                    "borderTopWidth": 1,
+                    "borderWidth": 1,
                     "borderStyle": "solid",
-                    "borderTopColor": "green",
-                    "borderRightWidth": 1,
-                    "borderRightColor": "green",
-                    "borderBottomWidth": 1,
-                    "borderBottomColor": "green",
-                    "borderLeftWidth": 1,
-                    "borderLeftColor": "green"
+                    "borderColor": "green"
                 }
             });
         });
