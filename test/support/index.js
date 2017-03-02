@@ -66,7 +66,6 @@ export const makeRequire = (dimensions, Platform)=> {
 
 function compile(sources, require) {
     const src = source(sources);
-    log(src)
 
     try {
         const f = new Function(['require', 'exports'], src);

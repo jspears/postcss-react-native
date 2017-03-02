@@ -15,7 +15,6 @@ describe('transform', function () {
                     return o;
                 },
                 toStyleSheet(...args){
-                    console.log('stylesheet', ...args);
                 }
             })
     });

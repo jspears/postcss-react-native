@@ -88,8 +88,7 @@ describe('postcss-react-native', function () {
                     "marginBottom": 5,
                     "marginLeft": 2,
                     "color": "rgba(255, 255, 0, 1)",
-                    "borderLeftWidth": 5,
-                    "borderRightWidth": 5,
+                    "borderWidth": 5,
                     "borderTopColor": "green",
                     "borderStyle": "solid"
                 },
@@ -101,7 +100,6 @@ describe('postcss-react-native', function () {
     });
     it('media should parse import', function () {
         return test('import', v=>v=> {
-            console.log(v);
             return v;
         }, (f, source)=> {
 
@@ -122,8 +120,7 @@ describe('postcss-react-native', function () {
                     "marginBottom": 5,
                     "marginLeft": 2,
                     "color": "purble",
-                    "borderLeftWidth": 5,
-                    "borderRightWidth": 5,
+                    "borderWidth": 5,
                     "borderTopColor": "green",
                     "borderStyle": "solid"
 
@@ -172,15 +169,9 @@ describe('postcss-react-native', function () {
                     "textAlign": "center",
                     "color": "rgba(51, 51, 51, 1)",
                     "marginBottom": 5,
-                    "borderTopWidth": 1,
+                    "borderWidth": 1,
                     "borderStyle": "solid",
-                    "borderTopColor": "green",
-                    "borderRightWidth": 1,
-                    "borderRightColor": "green",
-                    "borderBottomWidth": 1,
-                    "borderBottomColor": "green",
-                    "borderLeftWidth": 1,
-                    "borderLeftColor": "green"
+                    "borderColor": "green"
                 }
             });
         });
@@ -203,7 +194,6 @@ describe('postcss-react-native', function () {
     it('should parse component', function (done) {
         return testTransform('component', (f, source)=> {
             return f({height: 1024, width: 768, scale: 1}).then((ret, css, src)=> {
-                console.log(src);
                 expect(ret).to.exist;
                 done();
             }, done);
@@ -213,7 +203,6 @@ describe('postcss-react-native', function () {
     it('should parse clazz-pseudo', function (done) {
         return testTransform('clazz-pseudo', (f, source)=> {
             return f({height: 1024, width: 768, scale: 1}).then((ret, css, src)=> {
-                console.log(src);
                 expect(ret).to.exist;
                 done();
             }, done);
@@ -222,7 +211,6 @@ describe('postcss-react-native', function () {
     it('should parse real-import', function (done) {
         return testTransform('real-import', (f)=> {
             return f({height: 1024, width: 768, scale: 1}).then((ret, css, src)=> {
-                console.log(src);
                 expect(ret).to.exist;
                 done();
             }, done);
