@@ -215,6 +215,11 @@ export const writeImports = (imports = []) => {
 `;
 };
 
+export const writeExports = (exportsObj = {}) => {
+    return Object.keys(exportsObj).map(
+      key => `exports['${key}'] = '${exportsObj[key]}';`).join('\n');
+};
+
 export const rulesAreEqual = (ruleA, ruleB) => {
     const ruleAProps = Object.keys(ruleA);
     const ruleBProps = Object.keys(ruleB);
@@ -285,6 +290,9 @@ export const source = (model)=> {
 
      //imports
      ${writeImports(model.imports)}
+     
+     //exports
+     ${writeExports(model.exports)}
     
      //internals
      exports.internals = function(_internals){

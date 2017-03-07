@@ -54,10 +54,18 @@ module.exports = postcss.plugin('postcss-react-native', function (opts) {
         const root = {
             rules: [ro],
             namespaces: {},
-            imports: []
+            imports: [],
+            exports: {}
         };
         const walker = createWalker(ro);
         src.walkRules((rule)=> {
+            if (rule.selector === ':export') {
+                rule.walkDecls(function (decl) {
+                    root.exports[decl.prop] = decl.value;
+                });
+                rule.remove();
+                return;
+            }
             if (rule.parent.type !== 'root') {
                 return;
             }
