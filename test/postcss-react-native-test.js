@@ -66,7 +66,8 @@ describe('postcss-react-native', function () {
                         }
                     ],
                     "namespaces": {},
-                    "imports": []
+                    "imports": [],
+                    "exports": {}
                 });
             },
             toStyleSheet(json, input){
@@ -217,4 +218,15 @@ describe('postcss-react-native', function () {
         });
     });
 
+    it('should parse :export selector', function () {
+        return test('exports', (f, source) => {
+            const css = f({height: 1024, width: 768, scale: 1}, 'android');
+            expect(css.color).to.eql('#FF0000');
+            expect(css.default).to.eql({
+                "other": {
+                    "opacity": 0.5
+                }
+            });
+        });
+    });
 });
