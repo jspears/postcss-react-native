@@ -313,7 +313,10 @@ export const source = (model)=> {
        (config)=>{
          const internals = exports.internals(importedInternals);
          return StyleSheet.create(Object.keys(internals).reduce((ret,internal)=>{
-           ret[internal] = internals[internal](config).__style;
+           const value = internals[internal](config).__style;
+           if (typeof (value) !== 'undefined') {
+             ret[internal] = value;
+           }
            return ret;
          }, {}));
      }));
